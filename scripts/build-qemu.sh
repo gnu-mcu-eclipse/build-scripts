@@ -154,7 +154,7 @@ then
   then
     # Download helper script from SF git.
     echo "Downloading helper script..."
-    curl -L "https://sourceforge.net/p/gnuarmeclipse/se/ci/develop/tree/scripts/build-helper.sh?format=raw" \
+    curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
   fi
 else
