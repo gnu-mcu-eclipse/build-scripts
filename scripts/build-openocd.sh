@@ -172,31 +172,36 @@ BUILD_FOLDER="${WORK_FOLDER}/build"
 # For updates, please check the corresponding pages.
 
 # https://sourceforge.net/projects/libusb/files/libusb-1.0/
-LIBUSB1_VERSION="1.0.19"
+# 1.0.20 from 2015-09-14
+LIBUSB1_VERSION="1.0.20"
 LIBUSB1_FOLDER="libusb-${LIBUSB1_VERSION}"
 LIBUSB1="${LIBUSB1_FOLDER}"
 LIBUSB1_ARCHIVE="${LIBUSB1}.tar.bz2"
 
 # https://sourceforge.net/projects/libusb/files/libusb-compat-0.1/
+# 0.1.5 from 2013-05-21
 LIBUSB0_VERSION="0.1.5"
 LIBUSB0_FOLDER="libusb-compat-${LIBUSB0_VERSION}"
 LIBUSB0="${LIBUSB0_FOLDER}"
 LIBUSB0_ARCHIVE="${LIBUSB0_FOLDER}.tar.bz2"
 
 # https://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/
+# 1.2.6.0 from 2012-01-17
 LIBUSB_W32_PREFIX="libusb-win32"
 LIBUSB_W32_VERSION="1.2.6.0"
 LIBUSB_W32="${LIBUSB_W32_PREFIX}-${LIBUSB_W32_VERSION}"
 LIBUSB_W32_FOLDER="${LIBUSB_W32_PREFIX}-src-${LIBUSB_W32_VERSION}"
 LIBUSB_W32_ARCHIVE="${LIBUSB_W32_FOLDER}.zip"
 
-#   http://www.intra2net.com/en/developer/libftdi/download.php
+# http://www.intra2net.com/en/developer/libftdi/download.php
+# 1.2 (no date)
 LIBFTDI_VERSION="1.2"
 LIBFTDI_FOLDER="libftdi1-${LIBFTDI_VERSION}"
 LIBFTDI_ARCHIVE="${LIBFTDI_FOLDER}.tar.bz2"
 LIBFTDI="${LIBFTDI_FOLDER}"
 
 # https://github.com/signal11/hidapi/downloads
+# Oct 26, 2011
 HIDAPI_VERSION="0.7.0"
 HIDAPI_FOLDER="hidapi-${HIDAPI_VERSION}"
 HIDAPI="${HIDAPI_FOLDER}"
@@ -249,6 +254,8 @@ source "$helper_script" --prepare-prerequisites
 
 if [ "${ACTION}" == "preload-images" ]
 then
+  source "$helper_script" --prepare-docker
+
   echo
   echo "Check/Preload Docker images..."
 
@@ -277,6 +284,8 @@ fi
 
 if [ "${ACTION}" == "build-images" ]
 then
+  source "$helper_script" --prepare-docker
+
   # Remove most build and temporary folders.
   echo
   echo "Build Docker images..."
@@ -301,6 +310,13 @@ then
   source "$helper_script" "--stop-timer"
 
   exit 0
+fi
+
+# ----- Start Docker, if needed. -----
+
+if [ -n "${DO_BUILD_WIN32}${DO_BUILD_WIN64}${DO_BUILD_DEB32}${DO_BUILD_DEB64}" ]
+then
+  source "$helper_script" --prepare-docker
 fi
 
 # ----- Check some more prerequisites. -----
@@ -391,7 +407,7 @@ esac
 
 # The custom OpenOCD branch is available from the dedicated Git repository
 # which is part of the GNU ARM Eclipse project hosted on SourceForge.
-# Generally this branch follows the official OpenOCD master branch, 
+# Generally this branch follows the official OpenOCD master branch,
 # with updates after every OpenOCD public release.
 
 if [ ! -d "${GIT_FOLDER}" ]
@@ -499,7 +515,7 @@ fi
 
 # ----- Get the FTDI library. -----
 
-# There are two versions of the FDDI library; we recommend using the 
+# There are two versions of the FDDI library; we recommend using the
 # open source one, available from intra2net.
 #	http://www.intra2net.com/en/developer/libftdi/
 
@@ -1112,9 +1128,9 @@ then
     # Note: don't forget to update the INFO.txt file after changing these.
 
     # Note: a very important detail here is LDFLAGS='-Wl,-rpath=\$$ORIGIN which
-    # adds a special record to the ELF file asking the loader to search for the 
-    # libraries first in the same folder where the executable is located. The 
-    # task is complicated due to the multiple substitutions that are done on 
+    # adds a special record to the ELF file asking the loader to search for the
+    # libraries first in the same folder where the executable is located. The
+    # task is complicated due to the multiple substitutions that are done on
     # the way, and need to be escaped.
 
   elif [ "${target_name}" == "osx" ]
@@ -1239,7 +1255,7 @@ then
 
   do_copy_libwinpthread_dll
 
-  # Copy possible DLLs. Currently only libusb0.dll is dynamic, all other 
+  # Copy possible DLLs. Currently only libusb0.dll is dynamic, all other
   # are also compiled as static.
   cp -v "${install_folder}/bin/"*.dll "${install_folder}/openocd/bin"
 
