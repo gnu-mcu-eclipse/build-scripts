@@ -309,15 +309,13 @@ DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
 
 source "$helper_script" --prepare-prerequisites
 
-if [ -n "${DO_BUILD_WIN32}${DO_BUILD_WIN64}${DO_BUILD_DEB32}${DO_BUILD_DEB64}" ]
-then
-  source "$helper_script" --prepare-docker
-fi
 
 # ----- Process "preload-images" action. -----
 
 if [ "${ACTION}" == "preload-images" ]
 then
+  source "$helper_script" --prepare-docker
+
   echo
   echo "Check/Preload Docker images..."
 
@@ -346,6 +344,8 @@ fi
 
 if [ "${ACTION}" == "build-images" ]
 then
+  source "$helper_script" --prepare-docker
+
   echo
   echo "Build Docker images..."
 
@@ -366,6 +366,13 @@ then
   source "$helper_script" "--stop-timer"
 
   exit 0
+fi
+
+# ----- Start Docker, if needed. -----
+
+if [ -n "${DO_BUILD_WIN32}${DO_BUILD_WIN64}${DO_BUILD_DEB32}${DO_BUILD_DEB64}" ]
+then
+  source "$helper_script" --prepare-docker
 fi
 
 # ----- Check some more prerequisites. -----
@@ -896,7 +903,7 @@ then
     \
     bash "configure" \
       --prefix="${install_folder}"
-      
+
   elif [ "${target_name}" == "osx" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
@@ -905,7 +912,7 @@ then
     \
     bash "configure" \
       --prefix="${install_folder}"
-      
+
   fi
 
   echo
@@ -968,7 +975,7 @@ then
     \
     bash "${work_folder}/${LIBPNG_FOLDER}/configure" \
       --prefix="${install_folder}"
-      
+
   elif [ "${target_name}" == "osx" ]
   then
     CPPFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
@@ -978,7 +985,7 @@ then
     \
     bash "${work_folder}/${LIBPNG_FOLDER}/configure" \
       --prefix="${install_folder}"
-      
+
   fi
 
   echo
@@ -1022,7 +1029,7 @@ then
     \
     bash "${work_folder}/${LIBJPG_FOLDER}/configure" \
       --prefix="${install_folder}"
-      
+
   elif [ "${target_name}" == "osx" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
@@ -1031,7 +1038,7 @@ then
     \
     bash "${work_folder}/${LIBJPG_FOLDER}/configure" \
       --prefix="${install_folder}"
-      
+
   fi
 
   echo
