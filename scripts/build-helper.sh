@@ -93,7 +93,12 @@ do
       then
         # Prepare MacPorts environment.
 
-        export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+        if [ -d /opt/macports ]
+        then
+          export PATH=/opt/macports/bin:/opt/macports/sbin:$PATH
+        elif [ -d /opt/local ]
+          export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+        fi
         echo
         echo "Adding MacPorts to PATH..."
         echo "Checking MacPorts..."
@@ -609,7 +614,7 @@ do_copy_user_so() {
         set +e
         chrpath --replace '$ORIGIN' "${ILIB}"
         set -e
-        
+
         ILIB_BASE="$(basename ${ILIB})"
         /usr/bin/install -v -c -m 644 "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin"
       else
@@ -799,4 +804,3 @@ do_strip() {
 
 
 # Continue in calling script.
-
