@@ -97,6 +97,7 @@ do
         then
           export PATH=/opt/macports/bin:/opt/macports/sbin:$PATH
         elif [ -d /opt/local ]
+        then
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
         fi
         echo
