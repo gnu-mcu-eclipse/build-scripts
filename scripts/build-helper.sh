@@ -584,7 +584,7 @@ do_copy_user_so() {
   then
     echo "Found user ${ILIB}"
     set +e
-    chrpath --replace '$ORIGIN' "${ILIB}"
+    patchelf --set-rpath '$ORIGIN' "${ILIB}"
     set -e
 
     ILIB_BASE="$(basename ${ILIB})"
@@ -599,7 +599,7 @@ do_copy_user_so() {
     then
       echo "Found user 2 ${ILIB}"
       set +e
-      chrpath --replace '$ORIGIN' "${ILIB}"
+      patchelf --set-rpath '$ORIGIN' "${ILIB}"
       set -e
 
       ILIB_BASE="$(basename ${ILIB})"
@@ -613,7 +613,7 @@ do_copy_user_so() {
       then
         echo "Found user 3 ${ILIB}"
         set +e
-        chrpath --replace '$ORIGIN' "${ILIB}"
+        patchelf --set-rpath '$ORIGIN' "${ILIB}"
         set -e
 
         ILIB_BASE="$(basename ${ILIB})"
