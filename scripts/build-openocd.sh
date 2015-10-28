@@ -66,12 +66,13 @@ DO_BUILD_DEB32=""
 DO_BUILD_DEB64=""
 DO_BUILD_OSX=""
 helper_script=""
+do_no_strip=""
 
 while [ $# -gt 0 ]
 do
   case "$1" in
 
-    clean|pull|checkout-dev|checkout-stable|build-images|preload-images)
+    clean|cleanall|pull|checkout-dev|checkout-stable|build-images|preload-images)
       ACTION="$1"
       shift
       ;;
@@ -111,10 +112,15 @@ do
       shift 2
       ;;
 
+    --no-strip)
+      do_no_strip="y"
+      shift
+      ;;
+
     --help)
       echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
       echo "Usage:"
-      echo "    bash $0 helper_script [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|pull|checkout-dev|checkout-stable|build-images] [--help]"
+      echo "    bash $0 helper_script [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|cleanall|pull|checkout-dev|checkout-stable|build-images] [--help]"
       echo
       exit 1
       ;;
@@ -210,11 +216,16 @@ HIDAPI_ARCHIVE="${HIDAPI}.zip"
 
 # ----- Process actions. -----
 
-if [ "${ACTION}" == "clean" ]
+if [ \( "${ACTION}" == "clean" \) -o \( "${ACTION}" == "cleanall" \) ]
 then
   # Remove most build and temporary folders.
   echo
-  echo "Remove most of the build folders..."
+  if [ "${ACTION}" == "cleanall" ]
+  then
+    echo "Remove all the build folders..."
+  else
+    echo "Remove most of the build folders (except output)..."
+  fi
 
   rm -rf "${BUILD_FOLDER}"
   rm -rf "${WORK_FOLDER}/install"
@@ -226,6 +237,11 @@ then
   rm -rf "${WORK_FOLDER}/${HIDAPI_FOLDER}"
 
   rm -rf "${WORK_FOLDER}/scripts"
+
+  if [ "${ACTION}" == "cleanall" ]
+  then
+    rm -rf "${WORK_FOLDER}/output"
+  fi
 
   echo
   echo "Clean completed. Proceed with a regular build."
@@ -260,11 +276,11 @@ then
   echo "Check/Preload Docker images..."
 
   echo
-  docker run --interactive --tty ilegeul/debian32:7-gnuarm-gcc \
+  docker run --interactive --tty ilegeul/debian32:8-gnuarm-gcc-x11-v3 \
   lsb_release --description --short
 
   echo
-  docker run --interactive --tty ilegeul/debian:7-gnuarm-gcc \
+  docker run --interactive --tty ilegeul/debian:8-gnuarm-gcc-x11-v3 \
   lsb_release --description --short
 
   echo
@@ -293,14 +309,11 @@ then
   # Be sure it will not crash on errors, in case the images are already there.
   set +e
 
-  docker build --tag "ilegeul/debian32:7-gnuarm-gcc" \
-  https://github.com/ilg-ul/docker/raw/master/debian32/7-gnuarm-gcc/Dockerfile
+  docker build --tag "ilegeul/debian32:8-gnuarm-gcc-x11-v3" \
+  https://github.com/ilg-ul/docker/raw/master/debian32/8-gnuarm-gcc-x11-v3/Dockerfile
 
-  docker build --tag "ilegeul/debian:7-gnuarm-gcc" \
-  https://github.com/ilg-ul/docker/raw/master/debian/7-gnuarm-gcc/Dockerfile
-
-  docker build --tag "ilegeul/debian:8-gnuarm-gcc" \
-  https://github.com/ilg-ul/docker/raw/master/debian/8-gnuarm-gcc/Dockerfile
+  docker build --tag "ilegeul/debian:8-gnuarm-gcc-x11-v3" \
+  https://github.com/ilg-ul/docker/raw/master/debian/8-gnuarm-gcc-x11-v3/Dockerfile
 
   docker build --tag "ilegeul/debian:8-gnuarm-mingw" \
   https://github.com/ilg-ul/docker/raw/master/debian/8-gnuarm-mingw/Dockerfile
@@ -576,6 +589,8 @@ touch "${script_file}"
 # Note: EOF is not quoted to allow local substitutions.
 cat <<EOF >> "${script_file}"
 #!/bin/bash
+
+# Add x for debug
 set -euo pipefail
 IFS=\$'\n\t'
 
@@ -591,6 +606,8 @@ LIBUSB_W32_FOLDER="${LIBUSB_W32_FOLDER}"
 LIBFTDI_FOLDER="${LIBFTDI_FOLDER}"
 HIDAPI_FOLDER="${HIDAPI_FOLDER}"
 HIDAPI="${HIDAPI}"
+
+do_no_strip="${do_no_strip}"
 
 EOF
 
@@ -685,6 +702,12 @@ then
 
 fi
 
+if [ "${target_name}" == "debian" ]
+then
+  # apt-get -y install patchelf
+  echo
+fi
+
 mkdir -p ${build_folder}
 cd ${build_folder}
 
@@ -716,6 +739,15 @@ then
 else
   echo "Checking gcc..."
   gcc --version 2>/dev/null | egrep -e 'gcc|clang'
+fi
+
+if [ "${target_name}" == "debian" ]
+then
+  echo "Checking chrpath..."
+  chrpath --version
+
+  echo "Checking patchelf..."
+  patchelf --version
 fi
 
 if [ "${target_name}" == "osx" ]
@@ -1016,7 +1048,7 @@ mkdir -p "${build_folder}/openocd"
 
 # ----- Configure OpenOCD. Use the same options as Freddie Chopin. -----
 
-if [ ! -f "${build_folder}/openocd/config.h" ]
+if [ ! -f "${build_folder}/${APP_LC_NAME}/config.h" ]
 then
 
   echo
@@ -1041,10 +1073,10 @@ then
     --host="${cross_compile_prefix}" \
     --prefix="${install_folder}/openocd"  \
     --datarootdir="${install_folder}" \
-    --infodir="${install_folder}/openocd/info"  \
-    --localedir="${install_folder}/openocd/locale"  \
-    --mandir="${install_folder}/openocd/man"  \
-    --docdir="${install_folder}/openocd/doc"  \
+    --infodir="${install_folder}/${APP_LC_NAME}/info"  \
+    --localedir="${install_folder}/${APP_LC_NAME}/locale"  \
+    --mandir="${install_folder}/${APP_LC_NAME}/man"  \
+    --docdir="${install_folder}/${APP_LC_NAME}/doc"  \
     --enable-aice \
     --enable-amtjtagaccel \
     --enable-armjtagew \
@@ -1094,10 +1126,10 @@ then
     bash "${git_folder}/configure" \
     --prefix="${install_folder}/openocd"  \
     --datarootdir="${install_folder}" \
-    --infodir="${install_folder}/openocd/info"  \
-    --localedir="${install_folder}/openocd/locale"  \
-    --mandir="${install_folder}/openocd/man"  \
-    --docdir="${install_folder}/openocd/doc"  \
+    --infodir="${install_folder}/${APP_LC_NAME}/info"  \
+    --localedir="${install_folder}/${APP_LC_NAME}/locale"  \
+    --mandir="${install_folder}/${APP_LC_NAME}/man"  \
+    --docdir="${install_folder}/${APP_LC_NAME}/doc"  \
     --enable-aice \
     --enable-amtjtagaccel \
     --enable-armjtagew \
@@ -1151,10 +1183,10 @@ then
     bash "${git_folder}/configure" \
     --prefix="${install_folder}/openocd"  \
     --datarootdir="${install_folder}" \
-    --infodir="${install_folder}/openocd/info"  \
-    --localedir="${install_folder}/openocd/locale"  \
-    --mandir="${install_folder}/openocd/man"  \
-    --docdir="${install_folder}/openocd/doc"  \
+    --infodir="${install_folder}/${APP_LC_NAME}/info"  \
+    --localedir="${install_folder}/${APP_LC_NAME}/locale"  \
+    --mandir="${install_folder}/${APP_LC_NAME}/man"  \
+    --docdir="${install_folder}/${APP_LC_NAME}/doc"  \
     --enable-aice \
     --disable-amtjtagaccel \
     --enable-armjtagew \
@@ -1194,8 +1226,8 @@ cp config.* "${output_folder}"
 
 # ----- Full build, with documentation. -----
 
-if [ ! \( -f "${build_folder}/openocd/src/openocd" \) -a \
-     ! \( -f "${build_folder}/openocd/src/openocd.exe" \) ]
+if [ ! \( -f "${build_folder}/${APP_LC_NAME}/src/openocd" \) -a \
+     ! \( -f "${build_folder}/${APP_LC_NAME}/src/openocd.exe" \) ]
 then
 
   # The bindir and pkgdatadir are required to configure bin and scripts folders
@@ -1229,11 +1261,14 @@ if [ "${target_name}" == "win" ]
 then
 
   # Probably due to a VirtualBox shared folder bug, the following fails with:
-  # i686-w64-mingw32-strip:/Host/Work/openocd/install/win32/openocd/bin/stE4wx0V: Protocol error
-  # ${cross_compile_prefix}-strip "${install_folder}/openocd/bin/openocd.exe"
+  # i686-w64-mingw32-strip:/Host/Work/${APP_LC_NAME}/install/win32/${APP_LC_NAME}/bin/stE4wx0V: Protocol error
+  # ${cross_compile_prefix}-strip "${install_folder}/${APP_LC_NAME}/bin/openocd.exe"
 
-  do_strip ${cross_compile_prefix}-strip \
-    "${install_folder}/openocd/bin/openocd.exe"
+  if [ -z "${do_no_strip}" ]
+  then
+    do_strip ${cross_compile_prefix}-strip \
+      "${install_folder}/${APP_LC_NAME}/bin/openocd.exe"
+  fi
 
   echo
   echo "Copying DLLs..."
@@ -1257,12 +1292,28 @@ then
 
   # Copy possible DLLs. Currently only libusb0.dll is dynamic, all other
   # are also compiled as static.
-  cp -v "${install_folder}/bin/"*.dll "${install_folder}/openocd/bin"
+  cp -v "${install_folder}/bin/"*.dll "${install_folder}/${APP_LC_NAME}/bin"
+
+  if [ -z "${do_no_strip}" ]
+  then
+    do_strip ${cross_compile_prefix}-strip "${install_folder}/${APP_LC_NAME}/bin/"*.dll
+  fi
 
 elif [ "${target_name}" == "debian" ]
 then
 
-  do_strip strip "${install_folder}/openocd/bin/openocd"
+  if [ -z "${do_no_strip}" ]
+  then
+    do_strip strip "${install_folder}/${APP_LC_NAME}/bin/openocd"
+  fi
+
+  # Note: this is a very important detail, 'patchelf' changes rpath
+  # in the ELF file to $ORIGIN, asking the loader to search
+  # for the libraries first in the same folder where the executable is
+  # located.
+
+  chrpath --replace '$ORIGIN' \
+    "${install_folder}/${APP_LC_NAME}/bin/openocd"
 
   echo
   echo "Copying shared libs..."
@@ -1275,122 +1326,59 @@ then
     distro_machine="i386"
   fi
 
-  ILIB=$(find "${install_folder}/lib"* -type f -name 'libusb-1.0.so.*.*' -print)
-  if [ ! -z "${ILIB}" ]
-  then
-    echo "Found ${ILIB}"
-    ILIB_BASE="$(basename ${ILIB})"
-    /usr/bin/install -v -c -m 644 "${ILIB}" \
-    "${install_folder}/openocd/bin"
-    ILIB_SHORT="$(echo $ILIB_BASE | sed -e 's/\([[:alnum:]]*\)[.]\([[:alnum:]]*\)[.]\([[:digit:]]*\)[.].*/\1.\2.\3/')"
-    (cd "${install_folder}/openocd/bin"; ln -sv "${ILIB_BASE}" "${ILIB_SHORT}")
-    ILIB_SHORT="$(echo $ILIB_BASE | sed -e 's/\([[:alnum:]]*\)[.]\([[:alnum:]]*\)[.]\([[:digit:]]*\)[.].*/\1.\2/')"
-    (cd "${install_folder}/openocd/bin"; ln -sv "${ILIB_BASE}" "${ILIB_SHORT}")
-  fi
+  do_copy_user_so libusb-1.0
+  do_copy_user_so libusb-0.1
+  do_copy_user_so libftdi1
 
-  ILIB=$(find "${install_folder}/lib"* -type f -name 'libusb-0.1.so.*.*' -print)
-  if [ ! -z "${ILIB}" ]
-  then
-    echo "Found ${ILIB}"
-    ILIB_BASE="$(basename ${ILIB})"
-    /usr/bin/install -v -c -m 644 "${ILIB}" \
-    "${install_folder}/openocd/bin"
-    ILIB_SHORT="$(echo $ILIB_BASE | sed -e 's/\([[:alnum:]]*\)[.]\([[:alnum:]]*\)[.]\([[:digit:]]*\)[.].*/\1.\2.\3/')"
-    (cd "${install_folder}/openocd/bin"; ln -sv "${ILIB_BASE}" "${ILIB_SHORT}")
-    ILIB_SHORT="$(echo $ILIB_BASE | sed -e 's/\([[:alnum:]]*\)[.]\([[:alnum:]]*\)[.]\([[:digit:]]*\)[.].*/\1.\2/')"
-    (cd "${install_folder}/openocd/bin"; ln -sv "${ILIB_BASE}" "${ILIB_SHORT}")
-  fi
-
-  ILIB=$(find "${install_folder}/lib"* -type f -name 'libftdi1.so.*.*' -print)
-  if [ ! -z "${ILIB}" ]
-  then
-    echo "Found ${ILIB}"
-    ILIB_BASE="$(basename ${ILIB})"
-    /usr/bin/install -v -c -m 644 "${ILIB}" \
-    "${install_folder}/openocd/bin"
-    ILIB_SHORT="$(echo $ILIB_BASE | sed -e 's/\([[:alnum:]]*\)[.]\([[:alnum:]]*\)[.]\([[:digit:]]*\)[.].*/\1.\2.\3/')"
-    (cd "${install_folder}/openocd/bin"; ln -sv "${ILIB_BASE}" "${ILIB_SHORT}")
-    ILIB_SHORT="$(echo $ILIB_BASE | sed -e 's/\([[:alnum:]]*\)[.]\([[:alnum:]]*\)[.]\([[:digit:]]*\)[.].*/\1.\2/')"
-    (cd "${install_folder}/openocd/bin"; ln -sv "${ILIB_BASE}" "${ILIB_SHORT}")
-  fi
-
-  # Add libudev.so locally.
-  ILIB=$(find /lib/${distro_machine}-linux-gnu /usr/lib/${distro_machine}-linux-gnu -type f -name 'libudev.so.*.*' -print)
-  if [ ! -z "${ILIB}" ]
-  then
-    echo "Found ${ILIB}"
-    ILIB_BASE="$(basename ${ILIB})"
-    /usr/bin/install -v -c -m 644 "${ILIB}" \
-    "${install_folder}/openocd/bin"
-    ILIB_SHORT="$(echo $ILIB_BASE | sed -e 's/\([[:alnum:]]*\)[.]\([[:alnum:]]*\)[.]\([[:digit:]]*\)[.].*/\1.\2.\3/')"
-    (cd "${install_folder}/openocd/bin"; ln -sv "${ILIB_BASE}" "${ILIB_SHORT}")
-    ILIB_SHORT="$(echo $ILIB_BASE | sed -e 's/\([[:alnum:]]*\)[.]\([[:alnum:]]*\)[.]\([[:digit:]]*\)[.].*/\1.\2/')"
-    (cd "${install_folder}/openocd/bin"; ln -sv "${ILIB_BASE}" "${ILIB_SHORT}")
-  else
-    echo
-    echo 'WARNING: libudev.so not copied locally!'
-    exit 1
-  fi
-
-  # Add librt.so.1 locally, to be sure it is available always.
-  ILIB=$(find /lib/${distro_machine}-linux-gnu /usr/lib/${distro_machine}-linux-gnu -type f -name 'librt-*.so' -print | grep -v i686)
-  if [ ! -z "${ILIB}" ]
-  then
-    echo "Found ${ILIB}"
-    ILIB_BASE="$(basename ${ILIB})"
-    /usr/bin/install -v -c -m 644 "${ILIB}" \
-    "${install_folder}/openocd/bin"
-    (cd "${install_folder}/openocd/bin"; ln -sv "${ILIB_BASE}" "librt.so.1")
-    (cd "${install_folder}/openocd/bin"; ln -sv "${ILIB_BASE}" "librt.so")
-  else
-    echo
-    echo "WARNING: librt.so not copied locally!"
-    exit 1
-  fi
+  do_copy_system_so libudev
+  do_copy_librt_so
 
 elif [ "${target_name}" == "osx" ]
 then
 
-  do_strip strip "${install_folder}/openocd/bin/openocd"
+  if [ -z "${do_no_strip}" ]
+  then
+    do_strip strip "${install_folder}/${APP_LC_NAME}/bin/openocd"
+  fi
 
   echo
   echo "Copying dynamic libs..."
 
   # Post-process dynamic libraries paths to be relative to executable folder.
 
-  # otool -L "${install_folder}/openocd/bin/openocd"
+  # otool -L "${install_folder}/${APP_LC_NAME}/bin/openocd"
   install_name_tool -change "libftdi1.2.dylib" "@executable_path/libftdi1.2.dylib" \
-    "${install_folder}/openocd/bin/openocd"
+    "${install_folder}/${APP_LC_NAME}/bin/openocd"
   install_name_tool -change "${install_folder}/lib/libusb-1.0.0.dylib" \
-    "@executable_path/libusb-1.0.0.dylib" "${install_folder}/openocd/bin/openocd"
+    "@executable_path/libusb-1.0.0.dylib" "${install_folder}/${APP_LC_NAME}/bin/openocd"
   install_name_tool -change "${install_folder}/lib/libusb-0.1.4.dylib" \
-    "@executable_path/libusb-0.1.4.dylib" "${install_folder}/openocd/bin/openocd"
-  otool -L "${install_folder}/openocd/bin/openocd"
+    "@executable_path/libusb-0.1.4.dylib" "${install_folder}/${APP_LC_NAME}/bin/openocd"
+  otool -L "${install_folder}/${APP_LC_NAME}/bin/openocd"
 
   DLIB="libftdi1.2.dylib"
   cp "${install_folder}/lib/libftdi1.2.2.0.dylib" \
-    "${install_folder}/openocd/bin/${DLIB}"
-  # otool -L "${install_folder}/openocd/bin/${DLIB}"
-  install_name_tool -id "${DLIB}" "${install_folder}/openocd/bin/${DLIB}"
+    "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  install_name_tool -id "${DLIB}" "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
   install_name_tool -change "${install_folder}/lib/libusb-1.0.0.dylib" \
-    "@executable_path/libusb-1.0.0.dylib" "${install_folder}/openocd/bin/${DLIB}"
-  otool -L "${install_folder}/openocd/bin/${DLIB}"
+    "@executable_path/libusb-1.0.0.dylib" "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
 
   DLIB="libusb-0.1.4.dylib"
   cp "${install_folder}/lib/libusb-0.1.4.dylib" \
-    "${install_folder}/openocd/bin/${DLIB}"
-  # otool -L "${install_folder}/openocd/bin/${DLIB}"
-  install_name_tool -id "${DLIB}" "${install_folder}/openocd/bin/${DLIB}"
+    "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  install_name_tool -id "${DLIB}" "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
   install_name_tool -change "${install_folder}/lib/libusb-1.0.0.dylib" \
-    "@executable_path/libusb-1.0.0.dylib" "${install_folder}/openocd/bin/${DLIB}"
-  otool -L "${install_folder}/openocd/bin/${DLIB}"
+    "@executable_path/libusb-1.0.0.dylib" "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
 
   DLIB="libusb-1.0.0.dylib"
   cp "${install_folder}/lib/libusb-1.0.0.dylib" \
-    "${install_folder}/openocd/bin/${DLIB}"
-  # otool -L "${install_folder}/openocd/bin/${DLIB}"
-  install_name_tool -id "${DLIB}" "${install_folder}/openocd/bin/${DLIB}"
-  otool -L "${install_folder}/openocd/bin/${DLIB}"
+    "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  install_name_tool -id "${DLIB}" "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
 
 fi
 
@@ -1487,7 +1475,7 @@ then
   do_build_target "Creating Debian 64-bits archive..." \
     --target-name debian \
     --target-bits 64 \
-    --docker-image ilegeul/debian:7-gnuarm-gcc
+    --docker-image ilegeul/debian:8-gnuarm-gcc-x11-v3
 fi
 
 # ----- Build the Debian 32-bits distribution. -----
@@ -1497,7 +1485,7 @@ then
   do_build_target "Creating Debian 32-bits archive..." \
     --target-name debian \
     --target-bits 32 \
-    --docker-image ilegeul/debian32:7-gnuarm-gcc
+    --docker-image ilegeul/debian32:8-gnuarm-gcc-x11-v3
 fi
 
 cat "${WORK_FOLDER}/output/"*.md5
