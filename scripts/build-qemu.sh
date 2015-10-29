@@ -73,7 +73,7 @@ while [ $# -gt 0 ]
 do
   case "$1" in
 
-    clean|pull|checkout-dev|checkout-stable|build-images|preload-images)
+    clean|cleanall|pull|checkout-dev|checkout-stable|build-images|preload-images)
       ACTION="$1"
       shift
       ;;
@@ -216,7 +216,8 @@ LIBSDL_URL="https://www.libsdl.org/release/${LIBSDL_ARCHIVE}"
 # https://www.libsdl.org/projects/SDL_image/release-1.2.html
 # https://www.libsdl.org/projects/SDL_image/release/SDL_image-1.2.12.tar.gz
 
-LIBSDL_IMAGE_VERSION="1.2.12"
+# Revert to 1.2.10 due to OS X El Capitan glitches.
+LIBSDL_IMAGE_VERSION="1.2.10"
 LIBSDL_IMAGE_FOLDER="SDL_image-${LIBSDL_IMAGE_VERSION}"
 LIBSDL_IMAGE_ARCHIVE="${LIBSDL_IMAGE_FOLDER}.tar.gz"
 LIBSDL_IMAGE_URL="https://www.libsdl.org/projects/SDL_image/release/${LIBSDL_IMAGE_ARCHIVE}"
@@ -266,11 +267,15 @@ LIBPIXMAN_URL="http://cairographics.org/releases/${LIBPIXMAN_ARCHIVE}"
 
 # ----- Process actions. -----
 
-if [ "${ACTION}" == "clean" ]
+if [ \( "${ACTION}" == "clean" \) -o \( "${ACTION}" == "cleanall" \) ]
 then
   # Remove most build and temporary folders.
-  echo
-  echo "Remove most of the build folders..."
+  if [ "${ACTION}" == "cleanall" ]
+  then
+    echo "Remove all the build folders..."
+  else
+    echo "Remove most of the build folders (except output)..."
+  fi
 
   rm -rf "${BUILD_FOLDER}"
   rm -rf "${WORK_FOLDER}/install"
@@ -286,6 +291,11 @@ then
   rm -rf "${WORK_FOLDER}/${LIBPIXMAN_FOLDER}"
 
   rm -rf "${WORK_FOLDER}/scripts"
+
+  if [ "${ACTION}" == "cleanall" ]
+  then
+    rm -rf "${WORK_FOLDER}/output"
+  fi
 
   echo
   echo "Clean completed. Proceed with a regular build."
@@ -320,11 +330,11 @@ then
   echo "Check/Preload Docker images..."
 
   echo
-  docker run --interactive --tty ilegeul/debian32:8-gnuarm-gcc-x11 \
+  docker run --interactive --tty ilegeul/debian32:8-gnuarm-gcc-x11-v3 \
   lsb_release --description --short
 
   echo
-  docker run --interactive --tty ilegeul/debian:8-gnuarm-gcc-x11 \
+  docker run --interactive --tty ilegeul/debian:8-gnuarm-gcc-x11-v3 \
   lsb_release --description --short
 
   echo
@@ -352,11 +362,11 @@ then
   # Be sure it will not crash on errors, in case the images are already there.
   set +e
 
-  docker build --tag "ilegeul/debian32:8-gnuarm-gcc-x11" \
-  https://github.com/ilg-ul/docker/raw/master/debian32/8-gnuarm-gcc-x11/Dockerfile
+  docker build --tag "ilegeul/debian32:8-gnuarm-gcc-x11-v3" \
+  https://github.com/ilg-ul/docker/raw/master/debian32/8-gnuarm-gcc-x11-v3/Dockerfile
 
-  docker build --tag "ilegeul/debian:8-gnuarm-gcc-x11" \
-  https://github.com/ilg-ul/docker/raw/master/debian/8-gnuarm-gcc-x11/Dockerfile
+  docker build --tag "ilegeul/debian:8-gnuarm-gcc-x11-v3" \
+  https://github.com/ilg-ul/docker/raw/master/debian/8-gnuarm-gcc-x11-v3/Dockerfile
 
   docker build --tag "ilegeul/debian:8-gnuarm-mingw" \
   https://github.com/ilg-ul/docker/raw/master/debian/8-gnuarm-mingw/Dockerfile
@@ -722,6 +732,8 @@ LIBGLIB_FOLDER="${LIBGLIB_FOLDER}"
 
 LIBPIXMAN_FOLDER="${LIBPIXMAN_FOLDER}"
 
+MACPORTS_FOLDER="${MACPORTS_FOLDER}"
+
 do_no_strip="${do_no_strip}"
 
 EOF
@@ -825,6 +837,7 @@ then
   # apt-get install libffi-dev
   # apt-get -y install libx11-dev libxext-dev
   # apt-get -y install chrpath
+  # apt-get -y install patchelf
   echo
 fi
 
@@ -856,6 +869,15 @@ then
 else
   echo "Checking gcc..."
   gcc --version 2>/dev/null | egrep -e 'gcc|clang'
+fi
+
+if [ "${target_name}" == "debian" ]
+then
+  echo "Checking chrpath..."
+  chrpath --version
+
+  echo "Checking patchelf..."
+  patchelf --version
 fi
 
 if [ "${target_name}" == "osx" ]
@@ -1095,7 +1117,7 @@ then
     \
     bash "${work_folder}/${LIBSDL_FOLDER}/configure" \
       --prefix="${install_folder}" \
-      --x-includes="/opt/local/include"
+      --x-includes="${MACPORTS_FOLDER}/include"
 
   fi
 
@@ -1739,13 +1761,13 @@ then
     do_strip strip "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
   fi
 
-  # Note: this is a very important detail, 'chrpath' changes rpath
+  # Note: this is a very important detail, 'patchelf' changes rpath
   # in the ELF file to $ORIGIN, asking the loader to search
   # for the libraries first in the same folder where the executable is
   # located.
 
-  chrpath --replace '$ORIGIN' \
-  "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
+  patchelf --set-rpath '$ORIGIN' \
+    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
 
   echo
   echo "Copying shared libs..."
@@ -1769,7 +1791,7 @@ then
   do_copy_user_so libglib-2.0
   do_copy_user_so libpixman-1
 
-  # do_copy_system_dll libpcre
+  # do_copy_system_so libpcre
   do_copy_user_so libz
 
   do_copy_librt_so
@@ -1803,16 +1825,16 @@ then
 
   echo
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "/opt/local/lib/libgnutls.28.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libgnutls.28.dylib" \
     "@executable_path/libgnutls.28.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "/opt/local/lib/libusb-1.0.0.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libusb-1.0.0.dylib" \
     "@executable_path/libusb-1.0.0.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
   install_name_tool -change "${install_folder}/lib/libz.1.dylib" \
     "@executable_path/libz.1.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "/opt/local/lib/libpixman-1.0.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libpixman-1.0.dylib" \
     "@executable_path/libpixman-1.0.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
   install_name_tool -change "${install_folder}/lib/libSDL-1.2.0.dylib" \
@@ -1821,7 +1843,7 @@ then
   install_name_tool -change "${install_folder}/lib/libSDL_image-1.2.0.dylib" \
     "@executable_path/libSDL_image-1.2.0.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "/opt/local/lib/libX11.6.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libX11.6.dylib" \
     "@executable_path/libX11.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
   install_name_tool -change "${install_folder}/lib/libgthread-2.0.0.dylib" \
@@ -1945,7 +1967,7 @@ then
   echo
   # Different input name
   ILIB=libz.1.dylib
-  cp -v "/opt/local/lib/libz.1.2.8.dylib" \
+  cp -v "${MACPORTS_FOLDER}/lib/libz.1.2.8.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id ${ILIB} "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
@@ -1953,132 +1975,136 @@ then
 
   echo
   ILIB=libgnutls.28.dylib
-  cp -v "/opt/local/lib/${ILIB}" \
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id libgnutls.28.dylib "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libz.1.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libz.1.dylib" \
     "@executable_path/libz.1.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libiconv.2.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libiconv.2.dylib" \
     "@executable_path/libiconv.2.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libp11-kit.0.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libp11-kit.0.dylib" \
     "@executable_path/libp11-kit.0.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libtasn1.6.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libtasn1.6.dylib" \
     "@executable_path/libtasn1.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libnettle.4.dylib" \
-    "@executable_path/libnettle.4.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libnettle.6.dylib" \
+    "@executable_path/libnettle.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libhogweed.2.dylib" \
-    "@executable_path/libhogweed.2.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libhogweed.4.dylib" \
+    "@executable_path/libhogweed.4.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libgmp.10.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libgmp.10.dylib" \
     "@executable_path/libgmp.10.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libintl.8.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libintl.8.dylib" \
     "@executable_path/libintl.8.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
   echo
   ILIB=libp11-kit.0.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libffi.6.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libffi.6.dylib" \
     "@executable_path/libffi.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libintl.8.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libintl.8.dylib" \
     "@executable_path/libintl.8.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
   echo
   ILIB=libtasn1.6.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
   echo
-  ILIB=libnettle.4.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  ILIB=libnettle.6.dylib
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
   echo
-  ILIB=libhogweed.2.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  ILIB=libhogweed.4.dylib
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libnettle.4.dylib" \
-    "@executable_path/libnettle.4.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libnettle.6.dylib" \
+    "@executable_path/libnettle.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libgmp.10.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libgmp.10.dylib" \
     "@executable_path/libgmp.10.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
   echo
   ILIB=libgmp.10.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
   echo
   ILIB=libpixman-1.0.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
   echo
   ILIB=libX11.6.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libxcb.1.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libxcb.1.dylib" \
     "@executable_path/libxcb.1.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
   echo
   ILIB=libXext.6.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libX11.6.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libX11.6.dylib" \
     "@executable_path/libX11.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
+# No longer neded on 10.11 with latest MacPorts
+if false
+then
   echo
   ILIB=libXrandr.2.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libXext.6.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libXext.6.dylib" \
     "@executable_path/libXext.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libXrender.1.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libXrender.1.dylib" \
     "@executable_path/libXrender.1.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libX11.6.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libX11.6.dylib" \
     "@executable_path/libX11.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+fi
 
   echo
   ILIB=libXrender.1.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libX11.6.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libX11.6.dylib" \
     "@executable_path/libX11.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
@@ -2086,27 +2112,27 @@ then
 
   echo
   ILIB=libxcb.1.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libXau.6.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libXau.6.dylib" \
     "@executable_path/libXau.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "/opt/local/lib/libXdmcp.6.dylib" \
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/libXdmcp.6.dylib" \
     "@executable_path/libXdmcp.6.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
   echo
   ILIB=libXau.6.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 
   echo
   ILIB=libXdmcp.6.dylib
-  cp -v "/opt/local/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
@@ -2218,7 +2244,7 @@ then
   do_build_target "Creating Debian 64-bits archive..." \
     --target-name debian \
     --target-bits 64 \
-    --docker-image ilegeul/debian:8-gnuarm-gcc-x11-v2
+    --docker-image ilegeul/debian:8-gnuarm-gcc-x11-v3
 fi
 
 # ----- Build the Debian 32-bits distribution. -----
@@ -2228,7 +2254,7 @@ then
   do_build_target "Creating Debian 32-bits archive..." \
     --target-name debian \
     --target-bits 32 \
-    --docker-image ilegeul/debian32:8-gnuarm-gcc-x11-v2
+    --docker-image ilegeul/debian32:8-gnuarm-gcc-x11-v3
 fi
 
 cat "${WORK_FOLDER}/output/"*.md5
