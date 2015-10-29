@@ -578,12 +578,12 @@ then
   cd "${WORK_FOLDER}/${LIBSDL_FOLDER}"
 
   echo
-  echo "applying patch sdl-1.2.15-no-CGDirectPaletteRef.patch..."
-  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-1.2.15-no-CGDirectPaletteRef.patch"
+  echo "applying patch sdl-${LIBSDL_VERSION}-no-CGDirectPaletteRef.patch..."
+  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-${LIBSDL_VERSION}-no-CGDirectPaletteRef.patch"
 
   echo
-  echo "applying patch ssdl-1.2.15-x11.patch..."
-  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-1.2.15-x11.patch"
+  echo "applying patch ssdl-${LIBSDL_VERSION}-x11.patch..."
+  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-${LIBSDL_VERSION}-x11.patch"
 fi
 
 # Download the SDL_image library.
@@ -600,6 +600,13 @@ if [ ! -d "${WORK_FOLDER}/${LIBSDL_IMAGE_FOLDER}" ]
 then
   cd "${WORK_FOLDER}"
   tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL_IMAGE_ARCHIVE}"
+
+  cd "${WORK_FOLDER}/${LIBSDL_IMAGE_FOLDER}"
+
+  echo
+  echo "applying patch sdl-image-${LIBSDL_IMAGE_VERSION}-setjmp.patch..."
+  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-image-${LIBSDL_IMAGE_VERSION}-setjmp.patch"
+
 fi
 
 # ----- Get the FFI library. -----
@@ -1766,7 +1773,7 @@ then
   # for the libraries first in the same folder where the executable is
   # located.
 
-  patchelf --set-rpath '$ORIGIN' \
+  chrpath --replace '$ORIGIN' \
     "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
 
   echo
