@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+#set -euo pipefail
 #IFS=$'\n\t'
 
 # Multi-platform helper for OpenOCD & QEMU builds, using Docker.
@@ -96,9 +96,11 @@ do
         if [ -d /opt/macports ]
         then
           export PATH=/opt/macports/bin:/opt/macports/sbin:$PATH
+          MACPORTS_FOLDER=/opt/macports
         elif [ -d /opt/local ]
         then
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+          MACPORTS_FOLDER=/opt/local
         fi
         echo
         echo "Adding MacPorts to PATH..."
