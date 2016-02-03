@@ -423,28 +423,32 @@ esac
 # Generally this branch follows the official OpenOCD master branch,
 # with updates after every OpenOCD public release.
 #GITURL=git.code.sf.net/p/gnuarmeclipse/openocd
-GITURL=gitolite3@192.168.122.1/openocd-code
-GITSTARTBRANCH=gnuarmeclipse-dev
+GITURL=192.168.29.251/utilities/openocd.git
+#GIT_HEAD_DEV=gnuarmeclipse-dev
+GIT_HEAD_DEV=validation
+# Local user may be different than remote user.
+GITLUSER=rfoos
+GITRUSER=git
 
 if [ ! -d "${GIT_FOLDER}" ]
 then
 
   cd "${WORK_FOLDER}"
 
-  if [ "${USER}" == "ilg" ]
+  if [ "${USER}" == "${GITLUSER}" ]
   then
-    # Shortcut for ilg, who has full access to the repo.
+    # Shortcut for ${GITLUSER}, who has full access to the repo.
     echo
     echo "Enter SourceForge password for git clone"
-    git clone ssh://ilg-ul@${GITURL} gnuarmeclipse-${APP_LC_NAME}.git
+    git clone ssh://${GITRUSER}@${GITURL} gnuarmeclipse-${APP_LC_NAME}.git
   else
     # For regular read/only access, use the git url.
-    git clone ssh://${GITURL} gnuarmeclipse-${APP_LC_NAME}.git
+    git clone http://${GITURL} gnuarmeclipse-${APP_LC_NAME}.git
   fi
 
   # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
   cd "${GIT_FOLDER}"
-  git checkout ${GITSTARTBRANCH}
+  git checkout ${GIT_HEAD_DEV}
   git submodule update
 
   # Prepare autotools.
@@ -600,6 +604,7 @@ IFS=\$'\n\t'
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
 GIT_HEAD="${GIT_HEAD}"
+GIT_HEAD_DEV="${GIT_HEAD_DEV}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
 
 LIBUSB1_FOLDER="${LIBUSB1_FOLDER}"
@@ -819,7 +824,6 @@ if [ \( "${target_name}" != "win" \) -a \
      ! \( -f "${install_folder}/lib/libusb.a" -o \
           -f "${install_folder}/lib64/libusb.a" \) ]
 then
-
   rm -rf "${build_folder}/${LIBUSB0_FOLDER}"
   mkdir -p "${build_folder}/${LIBUSB0_FOLDER}"
 
@@ -1421,9 +1425,9 @@ mkdir -p "${output_folder}"
 if [ "${GIT_HEAD}" == "gnuarmeclipse" ]
 then
   distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
-elif [ "${GIT_HEAD}" == "gnuarmeclipse-dev" ]
+elif [ "${GIT_HEAD}" == "${GIT_HEAD_DEV}" ]
 then
-  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-dev
+  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-${GIT_HEAD_DEV}-dev
 fi
 
 distribution_executable_name="openocd"

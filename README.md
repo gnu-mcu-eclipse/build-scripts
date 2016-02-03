@@ -11,3 +11,9 @@ To use the scripts, get them to `Downloads` and start them with `bash`.
 Each script will further download the helper script, the project repository, libraries, and all components required to perform the build.
 
 The result is a Windows setup, OS X install package, or GNU/Linux compressed archive.
+
+Fork to add a local git repo to stage change for upstream.
+- Git URL
+- Git Local User
+- Git Remote User
+- Git Branch
