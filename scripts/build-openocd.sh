@@ -422,6 +422,9 @@ esac
 # which is part of the GNU ARM Eclipse project hosted on SourceForge.
 # Generally this branch follows the official OpenOCD master branch,
 # with updates after every OpenOCD public release.
+#GITURL=git.code.sf.net/p/gnuarmeclipse/openocd
+GITURL=gitolite3@192.168.122.1/openocd-code
+GITSTARTBRANCH=gnuarmeclipse-dev
 
 if [ ! -d "${GIT_FOLDER}" ]
 then
@@ -433,15 +436,15 @@ then
     # Shortcut for ilg, who has full access to the repo.
     echo
     echo "Enter SourceForge password for git clone"
-    git clone ssh://ilg-ul@git.code.sf.net/p/gnuarmeclipse/openocd gnuarmeclipse-${APP_LC_NAME}.git
+    git clone ssh://ilg-ul@${GITURL} gnuarmeclipse-${APP_LC_NAME}.git
   else
     # For regular read/only access, use the git url.
-    git clone http://git.code.sf.net/p/gnuarmeclipse/openocd gnuarmeclipse-${APP_LC_NAME}.git
+    git clone ssh://${GITURL} gnuarmeclipse-${APP_LC_NAME}.git
   fi
 
   # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
   cd "${GIT_FOLDER}"
-  git checkout gnuarmeclipse-dev
+  git checkout ${GITSTARTBRANCH}
   git submodule update
 
   # Prepare autotools.
