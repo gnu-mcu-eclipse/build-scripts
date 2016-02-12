@@ -1,4 +1,23 @@
 #!/bin/bash
+
+# TEMPORARY workaround for passing environment vars. (unbound variables)
+
+#GITURL=git.code.sf.net/p/gnuarmeclipse/openocd
+[ -n "${GITURL}" ] || GITURL="192.168.29.251/utilities/openocd.git"
+# todo Drop -dev and allow release/dev builds.
+#GIT_HEAD_DEV=gnuarmeclipse-dev
+[ -n "${GIT_HEAD_DEV}" ] || GIT_HEAD_DEV=validation
+# Build machine user may be different than local user.
+[ -n "${GITDEVUSER}" ] || GITDEVUSER=${USER}
+# Local user may be different than remote user.
+[ -n "${GITLUSER}" ] || GITLUSER=rfoos
+# User at repo where we get openocd.
+[ -n "${GITRUSER}" ] || GITRUSER=git
+# SCRIPTURL=https://github.com/gnuarmeclipse
+# HELPERURL=https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh
+
+# TEMPORARY workaround for passing environment vars. (unbound variables)
+
 set -euo pipefail
 IFS=$'\n\t'
 
@@ -132,6 +151,9 @@ do
   esac
 
 done
+
+# Set up repo and users.
+
 
 # ----- Prepare build scripts. -----
 
@@ -358,7 +380,7 @@ do_repo_action() {
     echo "Running git pull..."
   elif [ "${ACTION}" == "checkout-dev" ]
   then
-    echo "Running git checkout gnuarmeclipse-dev & pull..."
+    echo "Running git checkout ${GIT_HEAD_DEV} & pull..."
   elif [ "${ACTION}" == "checkout-stable" ]
   then
     echo "Running git checkout gnuarmeclipse & pull..."
@@ -367,7 +389,7 @@ do_repo_action() {
   if [ -d "${GIT_FOLDER}" ]
   then
     echo
-    if [ "${USER}" == "ilg" ]
+    if [ "${USER}" == "${GITDEVUSER}" ]
     then
       echo "Enter SourceForge password for git pull"
     fi
@@ -376,7 +398,7 @@ do_repo_action() {
 
     if [ "${ACTION}" == "checkout-dev" ]
     then
-      git checkout gnuarmeclipse-dev
+      git checkout ${GIT_HEAD_DEV}
     elif [ "${ACTION}" == "checkout-stable" ]
     then
       git checkout gnuarmeclipse
@@ -422,20 +444,14 @@ esac
 # which is part of the GNU ARM Eclipse project hosted on SourceForge.
 # Generally this branch follows the official OpenOCD master branch,
 # with updates after every OpenOCD public release.
-#GITURL=git.code.sf.net/p/gnuarmeclipse/openocd
-GITURL=192.168.29.251/utilities/openocd.git
-#GIT_HEAD_DEV=gnuarmeclipse-dev
-GIT_HEAD_DEV=validation
-# Local user may be different than remote user.
-GITLUSER=rfoos
-GITRUSER=git
+# May be staging repo for upstream or patch release.
 
 if [ ! -d "${GIT_FOLDER}" ]
 then
 
   cd "${WORK_FOLDER}"
 
-  if [ "${USER}" == "${GITLUSER}" ]
+  if [ "${USER}" == "${GITDEVUSER}" ]
   then
     # Shortcut for ${GITLUSER}, who has full access to the repo.
     echo
@@ -603,8 +619,12 @@ IFS=\$'\n\t'
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
-GIT_HEAD="${GIT_HEAD}"
+GITURL="${GITURL}"
 GIT_HEAD_DEV="${GIT_HEAD_DEV}"
+GITDEVUSER="${GITDEVUSER}"
+GITLUSER="${GITLUSER}"
+GITRUSER="${GITRUSER}"
+GIT_HEAD="${GIT_HEAD}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
 
 LIBUSB1_FOLDER="${LIBUSB1_FOLDER}"
@@ -627,6 +647,11 @@ PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR:-""}
 # For just in case.
 export LC_ALL="C"
 export CONFIG_SHELL="/bin/bash"
+GITURL="${GITURL}"
+GIT_HEAD_DEV="${GIT_HEAD_DEV}"
+GITDEVUSER="${GITDEVUSER}"
+GITLUSER="${GITLUSER}"
+GITRUSER="${GITRUSER}"
 
 script_name="$(basename "$0")"
 args="$@"
