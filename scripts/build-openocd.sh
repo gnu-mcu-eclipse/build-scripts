@@ -4,15 +4,16 @@
 
 #GITURL=git.code.sf.net/p/gnuarmeclipse/openocd
 [ -n "${GITURL}" ] || GITURL="192.168.29.251/utilities/openocd.git"
-# todo Drop -dev and allow release/dev builds.
-#GIT_HEAD_DEV=gnuarmeclipse-dev
-[ -n "${GIT_HEAD_DEV}" ] || GIT_HEAD_DEV=validation
+#GIT_HEAD_BRANCH=gnuarmeclipse
+[ -n "${GIT_HEAD_BRANCH}" ] || GIT_HEAD_BRANCH=validation
 # Build machine user may be different than local user.
 [ -n "${GITDEVUSER}" ] || GITDEVUSER=${USER}
 # Local user may be different than remote user.
 [ -n "${GITLUSER}" ] || GITLUSER=rfoos
 # User at repo where we get openocd.
 [ -n "${GITRUSER}" ] || GITRUSER=git
+# Allow override in release builds for non-read only repo's.
+[ -n "${GITRELURL}" ] || GITRELURL=http://${GITURL}
 # SCRIPTURL=https://github.com/gnuarmeclipse
 # HELPERURL=https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh
 
@@ -380,7 +381,7 @@ do_repo_action() {
     echo "Running git pull..."
   elif [ "${ACTION}" == "checkout-dev" ]
   then
-    echo "Running git checkout ${GIT_HEAD_DEV} & pull..."
+    echo "Running git checkout ${GIT_HEAD_BRANCH} & pull..."
   elif [ "${ACTION}" == "checkout-stable" ]
   then
     echo "Running git checkout gnuarmeclipse & pull..."
@@ -398,7 +399,7 @@ do_repo_action() {
 
     if [ "${ACTION}" == "checkout-dev" ]
     then
-      git checkout ${GIT_HEAD_DEV}
+      git checkout ${GIT_HEAD_BRANCH}
     elif [ "${ACTION}" == "checkout-stable" ]
     then
       git checkout gnuarmeclipse
@@ -459,12 +460,12 @@ then
     git clone ssh://${GITRUSER}@${GITURL} gnuarmeclipse-${APP_LC_NAME}.git
   else
     # For regular read/only access, use the git url.
-    git clone http://${GITURL} gnuarmeclipse-${APP_LC_NAME}.git
+    git clone ${GITRELURL} gnuarmeclipse-${APP_LC_NAME}.git
   fi
 
   # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
   cd "${GIT_FOLDER}"
-  git checkout ${GIT_HEAD_DEV}
+  git checkout ${GIT_HEAD_BRANCH}
   git submodule update
 
   # Prepare autotools.
@@ -620,11 +621,12 @@ IFS=\$'\n\t'
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
 GITURL="${GITURL}"
-GIT_HEAD_DEV="${GIT_HEAD_DEV}"
+GIT_HEAD_BRANCH="${GIT_HEAD_BRANCH}"
 GITDEVUSER="${GITDEVUSER}"
 GITLUSER="${GITLUSER}"
 GITRUSER="${GITRUSER}"
 GIT_HEAD="${GIT_HEAD}"
+GITRELURL="${GITRELURL}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
 
 LIBUSB1_FOLDER="${LIBUSB1_FOLDER}"
@@ -648,7 +650,7 @@ PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR:-""}
 export LC_ALL="C"
 export CONFIG_SHELL="/bin/bash"
 GITURL="${GITURL}"
-GIT_HEAD_DEV="${GIT_HEAD_DEV}"
+GIT_HEAD_BRANCH="${GIT_HEAD_BRANCH}"
 GITDEVUSER="${GITDEVUSER}"
 GITLUSER="${GITLUSER}"
 GITRUSER="${GITRUSER}"
@@ -1447,16 +1449,20 @@ source "$helper_script" --copy-info
 
 mkdir -p "${output_folder}"
 
-if [ "${GIT_HEAD}" == "gnuarmeclipse" ]
+if [ "${GIT_HEAD}" == "${GIT_HEAD_BRANCH}" ]
 then
   distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
-elif [ "${GIT_HEAD}" == "${GIT_HEAD_DEV}" ]
+elif [ "${GIT_HEAD}" == "${GIT_HEAD_BRANCH}-dev" ]
 then
-  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-${GIT_HEAD_DEV}-dev
+  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-${GIT_HEAD_BRANCH}-dev
+else
+  echo "error: distribution file version not set. Check git branch name."
+  exit 2
 fi
 
 distribution_executable_name="openocd"
 
+# Requires ${distribution_file_version}
 source "$helper_script" --create-distribution
 
 # Requires ${distribution_file} and ${result}
