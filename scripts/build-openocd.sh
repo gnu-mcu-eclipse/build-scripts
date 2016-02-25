@@ -381,10 +381,10 @@ do_repo_action() {
     echo "Running git pull..."
   elif [ "${ACTION}" == "checkout-dev" ]
   then
-    echo "Running git checkout ${GIT_HEAD_BRANCH} & pull..."
+    echo "Running git checkout ${GIT_HEAD_BRANCH}-dev & pull..."
   elif [ "${ACTION}" == "checkout-stable" ]
   then
-    echo "Running git checkout gnuarmeclipse & pull..."
+    echo "Running git checkout ${GIT_HEAD_BRANCH} & pull..."
   fi
 
   if [ -d "${GIT_FOLDER}" ]
@@ -399,10 +399,10 @@ do_repo_action() {
 
     if [ "${ACTION}" == "checkout-dev" ]
     then
-      git checkout ${GIT_HEAD_BRANCH}
+      git checkout ${GIT_HEAD_BRANCH}-dev
     elif [ "${ACTION}" == "checkout-stable" ]
     then
-      git checkout gnuarmeclipse
+      git checkout ${GIT_HEAD_BRANCH}
     fi
 
     git pull
@@ -458,14 +458,16 @@ then
     echo
     echo "Enter SourceForge password for git clone"
     git clone ssh://${GITRUSER}@${GITURL} gnuarmeclipse-${APP_LC_NAME}.git
+    GIT_BRANCH=${GIT_HEAD_BRANCH}-dev
   else
-    # For regular read/only access, use the git url.
+    # For regular read/only access, use the default git release url.
     git clone ${GITRELURL} gnuarmeclipse-${APP_LC_NAME}.git
+    GIT_BRANCH=${GIT_HEAD_BRANCH}
   fi
 
   # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
   cd "${GIT_FOLDER}"
-  git checkout ${GIT_HEAD_BRANCH}
+  git checkout ${GIT_BRANCH}
   git submodule update
 
   # Prepare autotools.

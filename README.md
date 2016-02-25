@@ -14,6 +14,9 @@ The result is a Windows setup, OS X install package, or GNU/Linux compressed arc
 
 Fork to add a local git repo to stage change for upstream.
 - Git URL
+- Git Development User
 - Git Local User
 - Git Remote User
 - Git Branch
+- Git Release URL (In case http doesnt work to clone repo)
+
