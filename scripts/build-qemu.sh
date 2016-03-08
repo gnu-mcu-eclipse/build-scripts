@@ -2274,6 +2274,11 @@ then
     --docker-image ilegeul/debian32:8-gnuarm-gcc-x11-v3
 fi
 
+# ---- Prevent script break because of not found MD5 file without arguments ----
+mkdir -p ${WORK_FOLDER}/output
+echo "" > ${WORK_FOLDER}/output/empty.md5
+# ----
+
 cat "${WORK_FOLDER}/output/"*.md5
 
 source "$helper_script" "--stop-timer"
