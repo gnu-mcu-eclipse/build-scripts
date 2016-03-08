@@ -739,11 +739,21 @@ LIBGLIB_FOLDER="${LIBGLIB_FOLDER}"
 
 LIBPIXMAN_FOLDER="${LIBPIXMAN_FOLDER}"
 
-MACPORTS_FOLDER="${MACPORTS_FOLDER}"
-
 do_no_strip="${do_no_strip}"
 
 EOF
+
+if [ "$HOST_DISTRO_NAME" == "Darwin" ]
+then
+
+# Note: EOF is not quoted to allow local substitutions.
+cat <<EOF >> "${script_file}"
+
+MACPORTS_FOLDER="${MACPORTS_FOLDER}"
+
+EOF
+
+fi
 
 # Note: EOF is quoted to prevent substitutions here.
 cat <<'EOF' >> "${script_file}"
