@@ -153,9 +153,6 @@ do
 
 done
 
-# Set up repo and users.
-
-
 # ----- Prepare build scripts. -----
 
 build_script=$0
@@ -445,7 +442,6 @@ esac
 # which is part of the GNU ARM Eclipse project hosted on SourceForge.
 # Generally this branch follows the official OpenOCD master branch,
 # with updates after every OpenOCD public release.
-# May be staging repo for upstream or patch release.
 
 if [ ! -d "${GIT_FOLDER}" ]
 then
@@ -853,6 +849,7 @@ if [ \( "${target_name}" != "win" \) -a \
      ! \( -f "${install_folder}/lib/libusb.a" -o \
           -f "${install_folder}/lib64/libusb.a" \) ]
 then
+
   rm -rf "${build_folder}/${LIBUSB0_FOLDER}"
   mkdir -p "${build_folder}/${LIBUSB0_FOLDER}"
 
@@ -1464,7 +1461,6 @@ fi
 
 distribution_executable_name="openocd"
 
-# Requires ${distribution_file_version}
 source "$helper_script" --create-distribution
 
 # Requires ${distribution_file} and ${result}
