@@ -207,6 +207,15 @@ do
       do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/config.log"
       ;;
 
+    --win-install-folder) # -----
+
+      win_install_folder=$2
+      echo
+      echo "Windows install folder: ${win_install_folder}"
+      echo
+      shift 2
+      ;;
+
     --create-distribution)
 
       if [ "${target_name}" == "win" ]
@@ -234,6 +243,7 @@ do
           -DW${target_bits} \
           -DBITS=${target_bits} \
           -DVERSION=${distribution_file_version} \
+          -DWININSTDIR="${win_install_folder}" \
           "${nsis_file}"
         result="$?"
 

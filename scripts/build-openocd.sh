@@ -2,20 +2,24 @@
 
 # TEMPORARY workaround for passing environment vars. (unbound variables)
 
-#GITURL=git.code.sf.net/p/gnuarmeclipse/openocd
-[ -n "${GITURL}" ] || GITURL="192.168.29.251/utilities/openocd.git"
+#GITDEVURL=ssh://ilg-ul@git.code.sf.net/p/gnuarmeclipse/openocd
+[ -n "${GITDEVURL}" ] || GITDEVURL="ssh://git@192.168.29.251/utilities/openocd.git"
 #GIT_HEAD_BRANCH=gnuarmeclipse
 [ -n "${GIT_HEAD_BRANCH}" ] || GIT_HEAD_BRANCH=validation
 # Build machine user may be different than local user.
 [ -n "${GITDEVUSER}" ] || GITDEVUSER=${USER}
 # Local user may be different than remote user.
 [ -n "${GITLUSER}" ] || GITLUSER=rfoos
-# User at repo where we get openocd.
-[ -n "${GITRUSER}" ] || GITRUSER=git
 # Allow override in release builds for non-read only repo's.
-[ -n "${GITRELURL}" ] || GITRELURL=http://${GITURL}
+[ -n "${GITRELURL}" ] || GITRELURL="http://192.168.29.251/utilities/openocd.git"
+# Allow override of C:\Program Files for windows installer.
+# WININSTDIR=""
+[ -n "${WININSTDIR}" ] || WININSTDIR="C:\\AmbiqMicro\\OpenOCD"
 # SCRIPTURL=https://github.com/gnuarmeclipse
-# HELPERURL=https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh
+# HELPERURL=https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh 
+[ -n "${HELPERURL}" ] || \
+    HELPERURL=https://github.com/rickfoosusa/build-scripts/raw/master/scripts/build-helper.sh
+# DOCKERURL=https://github.com/ilg-ul/docker/raw/master
 
 # TEMPORARY workaround for passing environment vars. (unbound variables)
 
@@ -173,7 +177,7 @@ then
   then
     # Download helper script from SF git.
     echo "Downloading helper script..."
-    curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
+    curl -L "${HELPERURL}" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
   fi
 else
@@ -453,7 +457,7 @@ then
     # Shortcut for ${GITLUSER}, who has full access to the repo.
     echo
     echo "Enter SourceForge password for git clone"
-    git clone ssh://${GITRUSER}@${GITURL} gnuarmeclipse-${APP_LC_NAME}.git
+    git clone ${GITDEVURL} gnuarmeclipse-${APP_LC_NAME}.git
     GIT_BRANCH=${GIT_HEAD_BRANCH}-dev
   else
     # For regular read/only access, use the default git release url.
@@ -618,14 +622,14 @@ IFS=\$'\n\t'
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
-GITURL="${GITURL}"
+GITDEVURL="${GITDEVURL}"
 GIT_HEAD_BRANCH="${GIT_HEAD_BRANCH}"
 GITDEVUSER="${GITDEVUSER}"
 GITLUSER="${GITLUSER}"
-GITRUSER="${GITRUSER}"
 GIT_HEAD="${GIT_HEAD}"
 GITRELURL="${GITRELURL}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
+WININSTDIR="${WININSTDIR}"
 
 LIBUSB1_FOLDER="${LIBUSB1_FOLDER}"
 LIBUSB0_FOLDER="${LIBUSB0_FOLDER}"
@@ -647,11 +651,10 @@ PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR:-""}
 # For just in case.
 export LC_ALL="C"
 export CONFIG_SHELL="/bin/bash"
-GITURL="${GITURL}"
+GITDEVURL="${GITDEVURL}"
 GIT_HEAD_BRANCH="${GIT_HEAD_BRANCH}"
 GITDEVUSER="${GITDEVUSER}"
 GITLUSER="${GITLUSER}"
-GITRUSER="${GITRUSER}"
 
 script_name="$(basename "$0")"
 args="$@"
@@ -1457,6 +1460,13 @@ then
 else
   echo "error: distribution file version not set. Check git branch name."
   exit 2
+fi
+
+if [ -n "${WININSTDIR}" ]
+then
+    echo "*** Setting wininstdir ${WININSTDIR}"
+#    source "$helper_script" --win-install-folder ${WININSTDIR}
+    win_install_folder="${WININSTDIR}"
 fi
 
 distribution_executable_name="openocd"
