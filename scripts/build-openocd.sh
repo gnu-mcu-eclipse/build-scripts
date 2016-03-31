@@ -13,12 +13,10 @@
 # Allow override in release builds for non-read only repo's.
 [ -n "${GITRELURL}" ] || GITRELURL="http://192.168.29.251/utilities/openocd.git"
 # Allow override of C:\Program Files for windows installer.
-# WININSTDIR=""
-[ -n "${WININSTDIR}" ] || WININSTDIR="C:\\AmbiqMicro\\OpenOCD"
 # SCRIPTURL=https://github.com/gnuarmeclipse
 # HELPERURL=https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh 
 [ -n "${HELPERURL}" ] || \
-    HELPERURL=https://github.com/rickfoosusa/build-scripts/raw/master/scripts/build-helper.sh
+    HELPERURL="https://github.com/rickfoosusa/build-scripts/raw/master/scripts/build-helper.sh"
 # DOCKERURL=https://github.com/ilg-ul/docker/raw/master
 
 # TEMPORARY workaround for passing environment vars. (unbound variables)
@@ -91,6 +89,7 @@ DO_BUILD_DEB64=""
 DO_BUILD_OSX=""
 helper_script=""
 do_no_strip=""
+win_install_folder=""
 
 while [ $# -gt 0 ]
 do
@@ -141,10 +140,20 @@ do
       shift
       ;;
 
+    --win-install-folder) # -----
+      win_install_folder=$2
+      echo
+      echo "Windows install folder: ${win_install_folder}"
+      echo
+      shift 2
+      ;;
+
+
     --help)
       echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
       echo "Usage:"
       echo "    bash $0 helper_script [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|cleanall|pull|checkout-dev|checkout-stable|build-images] [--help]"
+      echo "    [--win-install-folder|]"
       echo
       exit 1
       ;;
@@ -629,7 +638,7 @@ GITLUSER="${GITLUSER}"
 GIT_HEAD="${GIT_HEAD}"
 GITRELURL="${GITRELURL}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
-WININSTDIR="${WININSTDIR}"
+win_install_folder="${win_install_folder}"
 
 LIBUSB1_FOLDER="${LIBUSB1_FOLDER}"
 LIBUSB0_FOLDER="${LIBUSB0_FOLDER}"
@@ -1460,13 +1469,6 @@ then
 else
   echo "error: distribution file version not set. Check git branch name."
   exit 2
-fi
-
-if [ -n "${WININSTDIR}" ]
-then
-    echo "*** Setting wininstdir ${WININSTDIR}"
-#    source "$helper_script" --win-install-folder ${WININSTDIR}
-    win_install_folder="${WININSTDIR}"
 fi
 
 distribution_executable_name="openocd"
