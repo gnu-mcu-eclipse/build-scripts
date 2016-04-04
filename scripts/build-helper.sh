@@ -182,6 +182,12 @@ do
         "${install_folder}/${APP_LC_NAME}/INFO.txt"
       do_unix2dos "${install_folder}/${APP_LC_NAME}/INFO.txt"
 
+#### AMBIQ BEGIN ####
+      /usr/bin/install -cv -m 644 "${git_folder}/openocd.bat" \
+        "${install_folder}/${APP_LC_NAME}/openocd.bat"
+      do_unix2dos "${install_folder}/${APP_LC_NAME}/openocd.bat"
+#### AMBIQ END ####
+
       mkdir -p "${install_folder}/${APP_LC_NAME}/gnuarmeclipse"
 
       /usr/bin/install -cv -m 644 "${git_folder}/gnuarmeclipse/info/BUILD-${generic_target_name}.txt" \

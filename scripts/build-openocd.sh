@@ -420,7 +420,7 @@ do_repo_action() {
 
     rm -rf "${BUILD_FOLDER}/${APP_LC_NAME}"
 
-    # Prepare autotools.
+    # Prepare autotools. Host and Container automake versions must match
     echo
     echo "Running bootstrap..."
 
@@ -1095,6 +1095,15 @@ mkdir -p "${build_folder}/openocd"
 
 if [ ! -f "${build_folder}/${APP_LC_NAME}/config.h" ]
 then
+
+  if [ ! -f "${git_folder}/configure" ]
+  then
+    echo
+    echo "Running bootstrap..."
+
+    cd "${git_folder}"
+    ./bootstrap
+  fi
 
   echo
   echo "Running configure OpenOCD..."
