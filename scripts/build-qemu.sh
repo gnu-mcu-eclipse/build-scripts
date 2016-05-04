@@ -150,12 +150,19 @@ cp "${build_script}" "${WORK_FOLDER}/scripts/build-${APP_LC_NAME}.sh"
 
 if [ -z "${helper_script}" ]
 then
-  if [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
+  bh="$(dirname ${build_script})/build-helper.sh"
+  if [ -f "${bh}" ]
   then
-    # Download helper script from SF git.
-    echo "Downloading helper script..."
-    curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
+    echo "Copying helper script..."
+    cp -v "${bh}" "${WORK_FOLDER}/scripts/build-helper.sh"
+  else
+    if [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
+    then
+      # Download helper script from SF git.
+      echo "Downloading helper script..."
+      curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
+    fi
   fi
 else
   if [[ "${helper_script}" != /* ]]
@@ -1658,8 +1665,8 @@ then
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
     bash "${git_folder}/configure" \
-      --extra-cflags="-g -pipe -I${install_folder}/include -Wno-missing-format-attribute" \
-      --extra-ldflags="-v -L${install_folder}/lib" \
+      --extra-cflags="-g -pipe -I${install_folder}/include -I${MACPORTS_FOLDER}/include -Wno-missing-format-attribute" \
+      --extra-ldflags="-v -L${install_folder}/lib -L${MACPORTS_FOLDER}/lib -lX11" \
       --target-list="gnuarmeclipse-softmmu" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
