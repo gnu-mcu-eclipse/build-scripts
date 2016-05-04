@@ -103,7 +103,7 @@ do
           MACPORTS_FOLDER=/opt/local
         fi
         echo
-        echo "Adding MacPorts to PATH..."
+        echo "Adding ${MACPORTS_FOLDER} to PATH..."
         echo "Checking MacPorts..."
         set +e
         port version
