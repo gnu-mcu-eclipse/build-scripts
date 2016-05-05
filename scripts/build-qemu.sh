@@ -201,7 +201,8 @@ LIBPNG_SFOLDER="libpng16"
 #LIBPNG_SFOLDER="libpng12"
 LIBPNG_FOLDER="libpng-${LIBPNG_VERSION}"
 LIBPNG_ARCHIVE="${LIBPNG_FOLDER}.tar.gz"
-LIBPNG_URL="https://sourceforge.net/projects/libpng/files/${LIBPNG_SFOLDER}/${LIBPNG_VERSION}/${LIBPNG_ARCHIVE}"
+# LIBPNG_URL="https://sourceforge.net/projects/libpng/files/${LIBPNG_SFOLDER}/${LIBPNG_VERSION}/${LIBPNG_ARCHIVE}"
+LIBPNG_URL="https://sourceforge.net/projects/libpng/files/${LIBPNG_SFOLDER}/older-releases/${LIBPNG_VERSION}/${LIBPNG_ARCHIVE}"
 
 # http://www.ijg.org
 # http://www.ijg.org/files/
@@ -429,7 +430,7 @@ do_repo_action() {
     echo
     if [ "${USER}" == "ilg" ]
     then
-      echo "Enter SourceForge password for git pull"
+      echo "If asked, enter password for git pull"
     fi
 
     cd "${GIT_FOLDER}"
@@ -443,7 +444,7 @@ do_repo_action() {
     fi
 
     git pull
-    git submodule update
+    git submodule update --init dtc
 
     rm -rf "${BUILD_FOLDER}/${APP_LC_NAME}"
 
@@ -474,7 +475,7 @@ esac
 # ----- Get the GNU ARM Eclipse QEMU git repository. -----
 
 # The custom QEMU branch is available from the dedicated Git repository
-# which is part of the GNU ARM Eclipse project hosted on SourceForge.
+# which is part of the GNU ARM Eclipse project hosted on GitHub.
 # Generally this branch follows the official QEMU master branch,
 # with updates after every QEMU public release.
 
@@ -487,17 +488,17 @@ then
   then
     # Shortcut for ilg, who has full access to the repo.
     echo
-    echo "Enter SourceForge password for git clone"
-    git clone ssh://ilg-ul@git.code.sf.net/p/gnuarmeclipse/${APP_LC_NAME} gnuarmeclipse-${APP_LC_NAME}.git
+    echo "If asked, enter password for git clone"
+    git clone https://github.com/gnuarmeclipse/qemu.git gnuarmeclipse-${APP_LC_NAME}.git
   else
-    # For regular read/only access, use the git url.
-    git clone http://git.code.sf.net/p/gnuarmeclipse/${APP_LC_NAME} gnuarmeclipse-${APP_LC_NAME}.git
+    # For regular read/only access, use the http url.
+    git clone http://github.com/gnuarmeclipse/qemu.git gnuarmeclipse-${APP_LC_NAME}.git
   fi
 
   # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
   cd "${GIT_FOLDER}"
   git checkout gnuarmeclipse-dev
-  git submodule update
+  git submodule update --init dtc
 
 fi
 
