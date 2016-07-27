@@ -1633,7 +1633,6 @@ then
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
-      --enable-trace-backend=stderr \
       | tee "${output_folder}/configure-output.txt"
 
   elif [ "${target_name}" == "debian" ]
@@ -1653,7 +1652,6 @@ then
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
-      --enable-trace-backend=stderr \
     | tee "${output_folder}/configure-output.txt"
 
   elif [ "${target_name}" == "osx" ]
@@ -1673,7 +1671,6 @@ then
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
-      --enable-trace-backend=stderr \
     | tee "${output_folder}/configure-output.txt"
 
     # Configure fails for --static
@@ -2215,6 +2212,8 @@ then
 elif [ "${GIT_HEAD}" == "gnuarmeclipse-dev" ]
 then
   distribution_file_version=$(cat "${git_folder}/VERSION")-${DISTRIBUTION_FILE_DATE}-dev
+else
+  distribution_file_version=$(cat "${git_folder}/VERSION")-${DISTRIBUTION_FILE_DATE}-head
 fi
 
 distribution_executable_name="qemu-system-gnuarmeclipse"
