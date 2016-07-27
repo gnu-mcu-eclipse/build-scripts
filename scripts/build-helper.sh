@@ -156,7 +156,13 @@ do
       # Get the current Git branch name, to know if we are building the stable or
       # the development release.
       cd "${GIT_FOLDER}"
+      set +e
       GIT_HEAD=$(git symbolic-ref -q --short HEAD)
+      if [ $? -eq 1 ]
+      then
+        GIT_HEAD=""
+      fi
+      set -e
       ;;
 
     --get-current-date) # -----
