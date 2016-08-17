@@ -159,10 +159,10 @@ do
       shift 2
       ;;
 
-    --git-project-branch) # Project release branch (-dev for development)
+    --git-project-branch) # Project branch (-dev for development)
       git_project_branch=$2
       echo
-      echo "Git project release branch: ${git_project_branch}"
+      echo "Git project branch: ${git_project_branch}"
       echo
       shift 2
       ;;
@@ -1579,8 +1579,8 @@ then
 fi
 
 # ---- Prevent script break because of not found MD5 file without arguments ----
-sudo mkdir -p ${WORK_FOLDER}/output
-sudo touch ${WORK_FOLDER}/output/empty.md5
+#sudo mkdir -p ${WORK_FOLDER}/output
+#sudo touch ${WORK_FOLDER}/output/empty.md5
 # ----
 
 cat "${WORK_FOLDER}/output/"*.md5
