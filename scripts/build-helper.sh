@@ -156,7 +156,13 @@ do
       # Get the current Git branch name, to know if we are building the stable or
       # the development release.
       cd "${GIT_FOLDER}"
+      set +e
       GIT_HEAD=$(git symbolic-ref -q --short HEAD)
+      if [ $? -eq 1 ]
+      then
+        GIT_HEAD=""
+      fi
+      set -e
       ;;
 
     --get-current-date) # -----
@@ -183,9 +189,18 @@ do
       do_unix2dos "${install_folder}/${APP_LC_NAME}/INFO.txt"
 
 #### AMBIQ BEGIN ####
-      /usr/bin/install -cv -m 644 "${git_folder}/openocd.bat" \
-        "${install_folder}/${APP_LC_NAME}/openocd.bat"
-      do_unix2dos "${install_folder}/${APP_LC_NAME}/openocd.bat"
+      if [ -f "${git_folder}/openocd.bat" ]
+      then
+          /usr/bin/install -cv -m 644 "${git_folder}/openocd.bat" \
+            "${install_folder}/${APP_LC_NAME}/openocd.bat"
+          do_unix2dos "${install_folder}/${APP_LC_NAME}/openocd.bat"
+      fi
+      if [ -f "${git_folder}/VERSION" ]
+      then
+          /usr/bin/install -cv -m 644 "${git_folder}/VERSION" \
+            "${install_folder}/${APP_LC_NAME}/VERSION"
+          do_unix2dos "${install_folder}/${APP_LC_NAME}/VERSION"
+      fi
 #### AMBIQ END ####
 
       mkdir -p "${install_folder}/${APP_LC_NAME}/gnuarmeclipse"
@@ -231,7 +246,6 @@ do
 
         nsis_folder="${git_folder}/gnuarmeclipse/nsis"
         nsis_file="${nsis_folder}/gnuarmeclipse-${APP_LC_NAME}.nsi"
-
 
         cd "${build_folder}"
         makensis -V4 -NOCD \

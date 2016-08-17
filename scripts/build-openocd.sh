@@ -1,26 +1,5 @@
 #!/bin/bash
 
-# TEMPORARY workaround for passing environment vars. (unbound variables)
-
-#GITDEVURL=ssh://ilg-ul@git.code.sf.net/p/gnuarmeclipse/openocd
-[ -n "${GITDEVURL}" ] || GITDEVURL="ssh://git@192.168.29.251/utilities/openocd.git"
-#GIT_HEAD_BRANCH=gnuarmeclipse
-[ -n "${GIT_HEAD_BRANCH}" ] || GIT_HEAD_BRANCH=validation
-# Build machine user may be different than local user.
-[ -n "${GITDEVUSER}" ] || GITDEVUSER=${USER}
-# Local user may be different than remote user.
-[ -n "${GITLUSER}" ] || GITLUSER=rfoos
-# Allow override in release builds for non-read only repo's.
-[ -n "${GITRELURL}" ] || GITRELURL="http://192.168.29.251/utilities/openocd.git"
-# Allow override of C:\Program Files for windows installer.
-# SCRIPTURL=https://github.com/gnuarmeclipse
-# HELPERURL=https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh 
-[ -n "${HELPERURL}" ] || \
-    HELPERURL="https://github.com/rickfoosusa/build-scripts/raw/master/scripts/build-helper.sh"
-# DOCKERURL=https://github.com/ilg-ul/docker/raw/master
-
-# TEMPORARY workaround for passing environment vars. (unbound variables)
-
 set -euo pipefail
 IFS=$'\n\t'
 
@@ -90,6 +69,13 @@ DO_BUILD_OSX=""
 helper_script=""
 do_no_strip=""
 win_install_folder=""
+win_install_folder_default="(default)"
+git_dev_url="ssh://ilg-ul@git.code.sf.net/p/gnuarmeclipse/openocd"
+git_rel_url="http://git.code.sf.net/p/gnuarmeclipse/openocd"
+git_dev_user="ilg-ul"
+git_devbuild_user="ilg"
+build_scripts_url="https://github.com/gnuarmeclipse/build-scripts/raw/master"
+git_project_branch="gnuarmeclipse"
 
 while [ $# -gt 0 ]
 do
@@ -135,25 +121,72 @@ do
       shift 2
       ;;
 
+    --build-scripts-url) # Alternate location of build-scripts.
+      build_scripts_url=$2
+      echo
+      echo "build-scripts location: ${build_scripts_url}"
+      echo
+      shift 2
+      ;;
+
     --no-strip)
       do_no_strip="y"
       shift
       ;;
 
-    --win-install-folder) # -----
+    --win-install-folder) # If blank, installer uses program files.
       win_install_folder=$2
+      win_install_folder_default=${win_install_folder}
       echo
-      echo "Windows install folder: ${win_install_folder}"
+      echo "Windows install folder: ${win_install_folder_default}"
       echo
       shift 2
       ;;
 
+    --git-dev-url) # Alternate development repo for local builds.
+      git_dev_url=$2
+      echo
+      echo "Git development repo: ${git_dev_url}"
+      echo
+      shift 2
+      ;;
+
+    --git-rel-url) # Alternate release repo for local builds.
+      git_rel_url=$2
+      echo
+      echo "Git release repo: ${git_rel_url}"
+      echo
+      shift 2
+      ;;
+
+    --git-project-branch) # Project release branch (-dev for development)
+      git_project_branch=$2
+      echo
+      echo "Git project release branch: ${git_project_branch}"
+      echo
+      shift 2
+      ;;
+
+    --git-dev-user) # Development user for git repo.
+      git_dev_user=$2
+      echo
+      echo "Git development repo user: ${git_dev_user}"
+      echo
+      shift 2
+      ;;
+
+    --git-devbuild-user) # Development Build user, controls DEV/Release build.
+      git_devbuild_user=$2
+      echo
+      echo "Git development build user: ${git_devbuild_user}"
+      echo
+      shift 2
+      ;;
 
     --help)
       echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
       echo "Usage:"
-      echo "    bash $0 helper_script [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|cleanall|pull|checkout-dev|checkout-stable|build-images] [--help]"
-      echo "    [--win-install-folder|]"
+      echo "    bash $0 helper_script [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|cleanall|pull|checkout-dev|checkout-stable|build-images] [--help] [--win-install-folder] [--git-dev-url] [--git-rel-url] [--git-project-branch] [--git-dev-user] [--git-devbuild-user]"
       echo
       exit 1
       ;;
@@ -186,7 +219,7 @@ then
   then
     # Download helper script from SF git.
     echo "Downloading helper script..."
-    curl -L "${HELPERURL}" \
+    curl -L "${build_scripts_url}/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
   fi
 else
@@ -260,8 +293,8 @@ then
     echo "Remove most of the build folders (except output)..."
   fi
 
-  rm -rf "${BUILD_FOLDER}"
-  rm -rf "${WORK_FOLDER}/install"
+  sudo rm -rf "${BUILD_FOLDER}"
+  sudo rm -rf "${WORK_FOLDER}/install"
 
   rm -rf "${WORK_FOLDER}/${LIBUSB1_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBUSB0_FOLDER}"
@@ -273,7 +306,7 @@ then
 
   if [ "${ACTION}" == "cleanall" ]
   then
-    rm -rf "${WORK_FOLDER}/output"
+    sudo rm -rf "${WORK_FOLDER}/output"
   fi
 
   echo
@@ -293,7 +326,6 @@ source "$helper_script" --detect-host
 GIT_FOLDER="${WORK_FOLDER}/gnuarmeclipse-${APP_LC_NAME}.git"
 
 DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
-
 
 # ----- Prepare prerequisites. -----
 
@@ -391,16 +423,16 @@ do_repo_action() {
     echo "Running git pull..."
   elif [ "${ACTION}" == "checkout-dev" ]
   then
-    echo "Running git checkout ${GIT_HEAD_BRANCH}-dev & pull..."
+    echo "Running git checkout ${git_project_branch}-dev & pull..."
   elif [ "${ACTION}" == "checkout-stable" ]
   then
-    echo "Running git checkout ${GIT_HEAD_BRANCH} & pull..."
+    echo "Running git checkout ${git_project_branch} & pull..."
   fi
 
   if [ -d "${GIT_FOLDER}" ]
   then
     echo
-    if [ "${USER}" == "${GITDEVUSER}" ]
+    if [ "${USER}" == "${git_devbuild_user}" ]
     then
       echo "Enter SourceForge password for git pull"
     fi
@@ -409,10 +441,10 @@ do_repo_action() {
 
     if [ "${ACTION}" == "checkout-dev" ]
     then
-      git checkout ${GIT_HEAD_BRANCH}-dev
+      git checkout ${git_project_branch}-dev
     elif [ "${ACTION}" == "checkout-stable" ]
     then
-      git checkout ${GIT_HEAD_BRANCH}
+      git checkout ${git_project_branch}
     fi
 
     git pull
@@ -420,7 +452,7 @@ do_repo_action() {
 
     rm -rf "${BUILD_FOLDER}/${APP_LC_NAME}"
 
-    # Prepare autotools. Host and Container automake versions must match
+    # Prepare autotools.
     echo
     echo "Running bootstrap..."
 
@@ -461,21 +493,22 @@ then
 
   cd "${WORK_FOLDER}"
 
-  if [ "${USER}" == "${GITDEVUSER}" ]
+  if [ "${USER}" == "${git_devbuild_user}" ]
   then
-    # Shortcut for ${GITLUSER}, who has full access to the repo.
+    # Shortcut for ilg, who has full access to the repo.
     echo
     echo "Enter SourceForge password for git clone"
-    git clone ${GITDEVURL} gnuarmeclipse-${APP_LC_NAME}.git
-    GIT_BRANCH=${GIT_HEAD_BRANCH}-dev
+    git clone ${git_dev_url} gnuarmeclipse-${APP_LC_NAME}.git
+    GIT_BRANCH=${git_project_branch}-dev
   else
-    # For regular read/only access, use the default git release url.
-    git clone ${GITRELURL} gnuarmeclipse-${APP_LC_NAME}.git
-    GIT_BRANCH=${GIT_HEAD_BRANCH}
+    # For regular read/only access, use the git url.
+    git clone ${git_rel_url} gnuarmeclipse-${APP_LC_NAME}.git
+    GIT_BRANCH=${git_project_branch}
   fi
 
   # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
   cd "${GIT_FOLDER}"
+  # Check out the Release or Development branch from above.
   git checkout ${GIT_BRANCH}
   git submodule update
 
@@ -631,14 +664,14 @@ IFS=\$'\n\t'
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
-GITDEVURL="${GITDEVURL}"
-GIT_HEAD_BRANCH="${GIT_HEAD_BRANCH}"
-GITDEVUSER="${GITDEVUSER}"
-GITLUSER="${GITLUSER}"
 GIT_HEAD="${GIT_HEAD}"
-GITRELURL="${GITRELURL}"
-DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
+git_dev_url="${git_dev_url}"
+git_rel_url="${git_rel_url}"
+git_project_branch="${git_project_branch}"
+git_dev_user="${git_dev_user}"
+git_devbuild_user="${git_devbuild_user}"
 win_install_folder="${win_install_folder}"
+DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
 
 LIBUSB1_FOLDER="${LIBUSB1_FOLDER}"
 LIBUSB0_FOLDER="${LIBUSB0_FOLDER}"
@@ -660,10 +693,11 @@ PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR:-""}
 # For just in case.
 export LC_ALL="C"
 export CONFIG_SHELL="/bin/bash"
-GITDEVURL="${GITDEVURL}"
-GIT_HEAD_BRANCH="${GIT_HEAD_BRANCH}"
-GITDEVUSER="${GITDEVUSER}"
-GITLUSER="${GITLUSER}"
+git_dev_url="${git_dev_url}"
+git_rel_url="${git_rel_url}"
+git_project_branch="${git_project_branch}"
+git_dev_user="${git_dev_user}"
+git_devbuild_user="${git_devbuild_user}"
 
 script_name="$(basename "$0")"
 args="$@"
@@ -1096,6 +1130,7 @@ mkdir -p "${build_folder}/openocd"
 if [ ! -f "${build_folder}/${APP_LC_NAME}/config.h" ]
 then
 
+  # if empty clone, generate configure.
   if [ ! -f "${git_folder}/configure" ]
   then
     echo
@@ -1276,7 +1311,6 @@ fi
 
 cd "${build_folder}/${APP_LC_NAME}"
 cp config.* "${output_folder}"
-
 
 # ----- Full build, with documentation. -----
 
@@ -1469,15 +1503,14 @@ source "$helper_script" --copy-info
 
 mkdir -p "${output_folder}"
 
-if [ "${GIT_HEAD}" == "${GIT_HEAD_BRANCH}" ]
+if [ "${GIT_HEAD}" == "${git_project_branch}" ]
 then
   distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
-elif [ "${GIT_HEAD}" == "${GIT_HEAD_BRANCH}-dev" ]
+elif [ "${GIT_HEAD}" == "${git_project_branch}-dev" ]
 then
-  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-${GIT_HEAD_BRANCH}-dev
+  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-${git_project_branch}-dev
 else
-  echo "error: distribution file version not set. Check git branch name."
-  exit 2
+  distribution_file_version=$(cat "${git_folder}/VERSION")-${DISTRIBUTION_FILE_DATE}-head
 fi
 
 distribution_executable_name="openocd"
@@ -1544,6 +1577,11 @@ then
     --target-bits 32 \
     --docker-image ilegeul/debian32:8-gnuarm-gcc-x11-v3
 fi
+
+# ---- Prevent script break because of not found MD5 file without arguments ----
+sudo mkdir -p ${WORK_FOLDER}/output
+sudo touch ${WORK_FOLDER}/output/empty.md5
+# ----
 
 cat "${WORK_FOLDER}/output/"*.md5
 

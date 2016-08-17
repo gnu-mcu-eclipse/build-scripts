@@ -68,6 +68,14 @@ DO_BUILD_DEB64=""
 DO_BUILD_OSX=""
 helper_script=""
 do_no_strip=""
+win_install_folder=""
+win_install_folder_default="(default)"
+git_dev_url="ssh://ilg-ul@git.code.sf.net/p/gnuarmeclipse/openocd"
+git_rel_url="http://git.code.sf.net/p/gnuarmeclipse/openocd"
+git_dev_user="ilg-ul"
+git_devbuild_user="ilg"
+build_scripts_url="https://github.com/gnuarmeclipse/build-scripts/raw/master"
+git_project_branch="gnuarmeclipse"
 
 while [ $# -gt 0 ]
 do
@@ -113,15 +121,72 @@ do
       shift 2
       ;;
 
+    --build-scripts-url) # Alternate location of build-scripts.
+      build_scripts_url=$2
+      echo
+      echo "build-scripts location: ${build_scripts_url}"
+      echo
+      shift 2
+      ;;
+
     --no-strip)
       do_no_strip="y"
       shift
       ;;
 
+    --win-install-folder) # If blank, installer uses program files.
+      win_install_folder=$2
+      win_install_folder_default=${win_install_folder}
+      echo
+      echo "Windows install folder: ${win_install_folder_default}"
+      echo
+      shift 2
+      ;;
+
+    --git-dev-url) # Alternate development repo for local builds.
+      git_dev_url=$2
+      echo
+      echo "Git development repo: ${git_dev_url}"
+      echo
+      shift 2
+      ;;
+
+    --git-rel-url) # Alternate release repo for local builds.
+      git_rel_url=$2
+      echo
+      echo "Git release repo: ${git_rel_url}"
+      echo
+      shift 2
+      ;;
+
+    --git-project-branch) # Project release branch (-dev for development)
+      git_project_branch=$2
+      echo
+      echo "Git project release branch: ${git_project_branch}"
+      echo
+      shift 2
+      ;;
+
+    --git-dev-user) # Development user for git repo.
+      git_dev_user=$2
+      echo
+      echo "Git development repo user: ${git_dev_user}"
+      echo
+      shift 2
+      ;;
+
+    --git-devbuild-user) # Development Build user, controls DEV/Release build.
+      git_devbuild_user=$2
+      echo
+      echo "Git development build user: ${git_devbuild_user}"
+      echo
+      shift 2
+      ;;
+
     --help)
       echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
       echo "Usage:"
-      echo "    bash $0 [--helper-script file.sh] [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|pull|checkput-dev|checkout-stable|build-images] [--help]"
+      echo "    bash $0 [--helper-script file.sh] [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|pull|checkput-dev|checkout-stable|build-images] [--build-scripts-url] [--help]"
       echo
       exit 1
       ;;
@@ -160,7 +225,7 @@ then
     then
       # Download helper script from SF git.
       echo "Downloading helper script..."
-      curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
+      curl -L "${build_scripts_url}/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
     fi
   fi
@@ -278,6 +343,7 @@ LIBPIXMAN_URL="http://cairographics.org/releases/${LIBPIXMAN_ARCHIVE}"
 if [ \( "${ACTION}" == "clean" \) -o \( "${ACTION}" == "cleanall" \) ]
 then
   # Remove most build and temporary folders.
+  echo
   if [ "${ACTION}" == "cleanall" ]
   then
     echo "Remove all the build folders..."
@@ -327,7 +393,6 @@ DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
 
 source "$helper_script" --prepare-prerequisites
 
-
 # ----- Process "preload-images" action. -----
 
 if [ "${ACTION}" == "preload-images" ]
@@ -364,6 +429,7 @@ if [ "${ACTION}" == "build-images" ]
 then
   source "$helper_script" --prepare-docker
 
+  # Remove most build and temporary folders.
   echo
   echo "Build Docker images..."
 
@@ -419,16 +485,16 @@ do_repo_action() {
     echo "Running git pull..."
   elif [ "${ACTION}" == "checkout-dev" ]
   then
-    echo "Running git checkout gnuarmeclipse-dev & pull..."
+    echo "Running git checkout ${git_project_branch}-dev & pull..."
   elif [ "${ACTION}" == "checkout-stable" ]
   then
-    echo "Running git checkout gnuarmeclipse & pull..."
+    echo "Running git checkout ${git_project_branch} & pull..."
   fi
 
   if [ -d "${GIT_FOLDER}" ]
   then
     echo
-    if [ "${USER}" == "ilg" ]
+    if [ "${USER}" == "${git_devbuild_user}" ]
     then
       echo "If asked, enter password for git pull"
     fi
@@ -437,10 +503,10 @@ do_repo_action() {
 
     if [ "${ACTION}" == "checkout-dev" ]
     then
-      git checkout gnuarmeclipse-dev
+      git checkout ${git_project_branch}-dev
     elif [ "${ACTION}" == "checkout-stable" ]
     then
-      git checkout gnuarmeclipse
+      git checkout ${git_project_branch}
     fi
 
     git pull
@@ -457,7 +523,6 @@ do_repo_action() {
   fi
 
 }
-
 
 # ----- Process "pull|checkout-dev|checkout-stable" actions. -----
 
@@ -484,20 +549,23 @@ then
 
   cd "${WORK_FOLDER}"
 
-  if [ "${USER}" == "ilg" ]
+  if [ "${USER}" == "${git_devbuild_user}" ]
   then
     # Shortcut for ilg, who has full access to the repo.
     echo
-    echo "If asked, enter password for git clone"
-    git clone https://github.com/gnuarmeclipse/qemu.git gnuarmeclipse-${APP_LC_NAME}.git
+    echo "Enter SourceForge password for git clone"
+    git clone ${git_dev_url} gnuarmeclipse-${APP_LC_NAME}.git
+    GIT_BRANCH=${git_project_branch}-dev
   else
-    # For regular read/only access, use the http url.
-    git clone http://github.com/gnuarmeclipse/qemu.git gnuarmeclipse-${APP_LC_NAME}.git
+    # For regular read/only access, use the git url.
+    git clone ${git_rel_url} gnuarmeclipse-${APP_LC_NAME}.git
+    GIT_BRANCH=${git_project_branch}
   fi
 
   # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
   cd "${GIT_FOLDER}"
-  git checkout gnuarmeclipse-dev
+  # Check out the Release or Development branch from above.
+  git checkout ${GIT_BRANCH}
   git submodule update --init dtc
 
 fi
@@ -728,6 +796,12 @@ IFS=\$'\n\t'
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
 GIT_HEAD="${GIT_HEAD}"
+git_dev_url="${git_dev_url}"
+git_rel_url="${git_rel_url}"
+git_project_branch="${git_project_branch}"
+git_dev_user="${git_dev_user}"
+git_devbuild_user="${git_devbuild_user}"
+win_install_folder="${win_install_folder}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
 
 LIBZ_FOLDER="${LIBZ_FOLDER}"
@@ -771,6 +845,11 @@ PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR:-""}
 # For just in case.
 export LC_ALL="C"
 export CONFIG_SHELL="/bin/bash"
+git_dev_url="${git_dev_url}"
+git_rel_url="${git_rel_url}"
+git_project_branch="${git_project_branch}"
+git_dev_user="${git_dev_user}"
+git_devbuild_user="${git_devbuild_user}"
 
 script_name="$(basename "$0")"
 args="$@"
@@ -959,7 +1038,6 @@ then
     \
     bash "configure" \
       --prefix="${install_folder}"
-
   fi
 
   echo
@@ -1633,7 +1711,6 @@ then
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
-      --enable-trace-backend=stderr \
       | tee "${output_folder}/configure-output.txt"
 
   elif [ "${target_name}" == "debian" ]
@@ -1653,7 +1730,6 @@ then
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
-      --enable-trace-backend=stderr \
     | tee "${output_folder}/configure-output.txt"
 
   elif [ "${target_name}" == "osx" ]
@@ -1673,7 +1749,6 @@ then
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
-      --enable-trace-backend=stderr \
     | tee "${output_folder}/configure-output.txt"
 
     # Configure fails for --static
@@ -2209,12 +2284,14 @@ source "$helper_script" --copy-info
 
 mkdir -p "${output_folder}"
 
-if [ "${GIT_HEAD}" == "gnuarmeclipse" ]
+if [ "${GIT_HEAD}" == "${git_project_branch}" ]
 then
-  distribution_file_version=$(cat "${git_folder}/VERSION")-${DISTRIBUTION_FILE_DATE}
-elif [ "${GIT_HEAD}" == "gnuarmeclipse-dev" ]
+  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
+elif [ "${GIT_HEAD}" == "${git_project_branch}-dev" ]
 then
-  distribution_file_version=$(cat "${git_folder}/VERSION")-${DISTRIBUTION_FILE_DATE}-dev
+  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-${git_project_branch}-dev
+else
+  distribution_file_version=$(cat "${git_folder}/VERSION")-${DISTRIBUTION_FILE_DATE}-head
 fi
 
 distribution_executable_name="qemu-system-gnuarmeclipse"
@@ -2284,7 +2361,7 @@ fi
 
 # ---- Prevent script break because of not found MD5 file without arguments ----
 mkdir -p ${WORK_FOLDER}/output
-echo "" > ${WORK_FOLDER}/output/empty.md5
+touch ${WORK_FOLDER}/output/empty.md5
 # ----
 
 cat "${WORK_FOLDER}/output/"*.md5
