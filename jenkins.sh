@@ -22,6 +22,8 @@
 [ -n "${git_dev_user}" ] || git_dev_user=${USER}
 # Git development build user.
 [ -n "${git_devbuild_user}" ] || git_devbuild_user=${USER}
+# Location of build-scripts.
+[ -n "{build_scripts_url}" ] || build_scripts_url="https://github.com/rickfoosusa/build-scripts/raw/master"
 
 # Clean old git checkout
 sudo rm -rf ${WORKSPACE}/Work/openocd/gnuarmeclipse-openocd.git
@@ -46,4 +48,4 @@ bash build-scripts/scripts/build-openocd.sh ${BUILDOPTS} \
 --git-project-branch "${git_project_branch}" \
 --git-dev-user "${git_dev_user}" \
 --git-devbuild-user "${git_devbuild_user}" \
-$@
+--build-scripts-url "${build_scripts_url}"
