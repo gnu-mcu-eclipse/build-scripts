@@ -188,6 +188,19 @@ do
         "${install_folder}/${APP_LC_NAME}/INFO.txt"
       do_unix2dos "${install_folder}/${APP_LC_NAME}/INFO.txt"
 
+      if [ -f "${git_folder}/openocd.bat" ]
+      then
+          /usr/bin/install -cv -m 644 "${git_folder}/openocd.bat" \
+            "${install_folder}/${APP_LC_NAME}/openocd.bat"
+          do_unix2dos "${install_folder}/${APP_LC_NAME}/openocd.bat"
+      fi
+      if [ -f "${git_folder}/VERSION" ]
+      then
+          /usr/bin/install -cv -m 644 "${git_folder}/VERSION" \
+            "${install_folder}/${APP_LC_NAME}/VERSION"
+          do_unix2dos "${install_folder}/${APP_LC_NAME}/VERSION"
+      fi
+
       mkdir -p "${install_folder}/${APP_LC_NAME}/gnuarmeclipse"
 
       /usr/bin/install -cv -m 644 "${git_folder}/gnuarmeclipse/info/BUILD-${generic_target_name}.txt" \
@@ -240,6 +253,7 @@ do
           -DW${target_bits} \
           -DBITS=${target_bits} \
           -DVERSION=${distribution_file_version} \
+          -DWININSTDIR="${win_install_folder}" \
           "${nsis_file}"
         result="$?"
 

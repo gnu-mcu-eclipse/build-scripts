@@ -49,14 +49,6 @@ else
   WORK_FOLDER=${WORK_FOLDER:-"${HOME}/Work/${APP_LC_NAME}"}
 fi
 
-# ----- Create Work folder. -----
-
-echo
-echo "Using \"${WORK_FOLDER}\" as Work folder..."
-
-mkdir -p "${WORK_FOLDER}"
-
-
 # ----- Parse actions and command line options. -----
 
 ACTION=""
@@ -67,6 +59,14 @@ DO_BUILD_DEB64=""
 DO_BUILD_OSX=""
 helper_script=""
 do_no_strip=""
+win_install_folder=""
+win_install_folder_default="(default)"
+git_dev_url="ssh://ilg-ul@git.code.sf.net/p/gnuarmeclipse/openocd"
+git_rel_url="http://git.code.sf.net/p/gnuarmeclipse/openocd"
+git_dev_user="ilg-ul"
+git_devbuild_user="ilg"
+build_scripts_url="https://github.com/gnuarmeclipse/build-scripts/raw/master"
+git_project_branch="gnuarmeclipse"
 
 while [ $# -gt 0 ]
 do
@@ -117,10 +117,75 @@ do
       shift
       ;;
 
+    --build-scripts-url) # Alternate location of build-scripts.
+      build_scripts_url=$2
+      echo
+      echo "build-scripts url: ${build_scripts_url}"
+      echo
+      shift 2
+      ;;
+
+    --win-install-folder) # If blank, installer uses program files.
+      win_install_folder=$2
+      win_install_folder_default=${win_install_folder}
+      echo
+      echo "Windows install folder: ${win_install_folder_default}"
+      echo
+      shift 2
+      ;;
+
+    --git-dev-url) # Alternate development repo for local builds.
+      git_dev_url=$2
+      echo
+      echo "Git development repo: ${git_dev_url}"
+      echo
+      shift 2
+      ;;
+
+    --git-rel-url) # Alternate release repo for local builds.
+      git_rel_url=$2
+      echo
+      echo "Git release repo: ${git_rel_url}"
+      echo
+      shift 2
+      ;;
+
+    --git-project-branch) # Project branch (-dev for development)
+      git_project_branch=$2
+      echo
+      echo "Git project branch: ${git_project_branch}"
+      echo
+      shift 2
+      ;;
+
+    --git-dev-user) # Development user for git repo.
+      git_dev_user=$2
+      echo
+      echo "Git development repo user: ${git_dev_user}"
+      echo
+      shift 2
+      ;;
+
+    --git-devbuild-user) # Development Build user, controls DEV/Release build.
+      git_devbuild_user=$2
+      echo
+      echo "Git development build user: ${git_devbuild_user}"
+      echo
+      shift 2
+      ;;
+
+    --work-folder)
+      WORK_FOLDER=$2/Work/${APP_LC_NAME}
+      echo
+      echo "Work Folder: ${WORK_FOLDER}"
+      echo
+      shift 2
+      ;;
+
     --help)
       echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
       echo "Usage:"
-      echo "    bash $0 helper_script [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|cleanall|pull|checkout-dev|checkout-stable|build-images] [--help]"
+      echo "    bash $0 helper_script [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|cleanall|pull|checkout-dev|checkout-stable|build-images] [--help] [--win-install-folder] [--git-dev-url] [--git-rel-url] [--git-project-branch] [--git-dev-user] [--git-devbuild-user]"
       echo
       exit 1
       ;;
@@ -132,6 +197,13 @@ do
   esac
 
 done
+
+# ----- Create Work folder. -----
+
+echo
+echo "Using \"${WORK_FOLDER}\" as Work folder..."
+
+mkdir -p "${WORK_FOLDER}"
 
 # ----- Prepare build scripts. -----
 
@@ -152,8 +224,8 @@ then
   if [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
   then
     # Download helper script from SF git.
-    echo "Downloading helper script..."
-    curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
+    echo "Downloading helper script from ${build_scripts_url}"
+    curl -L "${build_scripts_url}/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
   fi
 else
@@ -227,8 +299,8 @@ then
     echo "Remove most of the build folders (except output)..."
   fi
 
-  rm -rf "${BUILD_FOLDER}"
-  rm -rf "${WORK_FOLDER}/install"
+  sudo rm -rf "${BUILD_FOLDER}"
+  sudo rm -rf "${WORK_FOLDER}/install"
 
   rm -rf "${WORK_FOLDER}/${LIBUSB1_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBUSB0_FOLDER}"
@@ -240,7 +312,7 @@ then
 
   if [ "${ACTION}" == "cleanall" ]
   then
-    rm -rf "${WORK_FOLDER}/output"
+    sudo rm -rf "${WORK_FOLDER}/output"
   fi
 
   echo
@@ -358,16 +430,16 @@ do_repo_action() {
     echo "Running git pull..."
   elif [ "${ACTION}" == "checkout-dev" ]
   then
-    echo "Running git checkout gnuarmeclipse-dev & pull..."
+    echo "Running git checkout ${git_project_branch}-dev & pull..."
   elif [ "${ACTION}" == "checkout-stable" ]
   then
-    echo "Running git checkout gnuarmeclipse & pull..."
+    echo "Running git checkout ${git_project_branch} & pull..."
   fi
 
   if [ -d "${GIT_FOLDER}" ]
   then
     echo
-    if [ "${USER}" == "ilg" ]
+    if [ "${USER}" == "${git_devbuild_user}" ]
     then
       echo "Enter SourceForge password for git pull"
     fi
@@ -376,10 +448,10 @@ do_repo_action() {
 
     if [ "${ACTION}" == "checkout-dev" ]
     then
-      git checkout gnuarmeclipse-dev
+      git checkout ${git_project_branch}-dev
     elif [ "${ACTION}" == "checkout-stable" ]
     then
-      git checkout gnuarmeclipse
+      git checkout ${git_project_branch}
     fi
 
     git pull
@@ -428,20 +500,23 @@ then
 
   cd "${WORK_FOLDER}"
 
-  if [ "${USER}" == "ilg" ]
+  if [ "${USER}" == "${git_devbuild_user}" ]
   then
     # Shortcut for ilg, who has full access to the repo.
     echo
     echo "Enter SourceForge password for git clone"
-    git clone ssh://ilg-ul@git.code.sf.net/p/gnuarmeclipse/openocd gnuarmeclipse-${APP_LC_NAME}.git
+    git clone ${git_dev_url} gnuarmeclipse-${APP_LC_NAME}.git
+    GIT_BRANCH=${git_project_branch}-dev
   else
     # For regular read/only access, use the git url.
-    git clone http://git.code.sf.net/p/gnuarmeclipse/openocd gnuarmeclipse-${APP_LC_NAME}.git
+    git clone ${git_rel_url} gnuarmeclipse-${APP_LC_NAME}.git
+    GIT_BRANCH=${git_project_branch}
   fi
 
   # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
   cd "${GIT_FOLDER}"
-  git checkout gnuarmeclipse-dev
+  # Check out the Release or Development branch from above.
+  git checkout ${GIT_BRANCH}
   git submodule update
 
   # Prepare autotools.
@@ -597,6 +672,12 @@ IFS=\$'\n\t'
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
 GIT_HEAD="${GIT_HEAD}"
+git_dev_url="${git_dev_url}"
+git_rel_url="${git_rel_url}"
+git_project_branch="${git_project_branch}"
+git_dev_user="${git_dev_user}"
+git_devbuild_user="${git_devbuild_user}"
+win_install_folder="${win_install_folder}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
 
 LIBUSB1_FOLDER="${LIBUSB1_FOLDER}"
@@ -619,6 +700,11 @@ PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR:-""}
 # For just in case.
 export LC_ALL="C"
 export CONFIG_SHELL="/bin/bash"
+git_dev_url="${git_dev_url}"
+git_rel_url="${git_rel_url}"
+git_project_branch="${git_project_branch}"
+git_dev_user="${git_dev_user}"
+git_devbuild_user="${git_devbuild_user}"
 
 script_name="$(basename "$0")"
 args="$@"
@@ -1051,6 +1137,16 @@ mkdir -p "${build_folder}/openocd"
 if [ ! -f "${build_folder}/${APP_LC_NAME}/config.h" ]
 then
 
+  # if empty clone, generate configure.
+  if [ ! -f "${git_folder}/configure" ]
+  then
+    echo
+    echo "Running bootstrap..."
+
+    cd "${git_folder}"
+    ./bootstrap
+  fi
+
   echo
   echo "Running configure OpenOCD..."
 
@@ -1415,12 +1511,14 @@ source "$helper_script" --copy-info
 
 mkdir -p "${output_folder}"
 
-if [ "${GIT_HEAD}" == "gnuarmeclipse" ]
+if [ "${GIT_HEAD}" == "${git_project_branch}" ]
 then
   distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
-elif [ "${GIT_HEAD}" == "gnuarmeclipse-dev" ]
+elif [ "${GIT_HEAD}" == "${git_project_branch}-dev" ]
 then
-  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-dev
+  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-${git_project_branch}-dev
+else
+  distribution_file_version=$(cat "${git_folder}/VERSION")-${DISTRIBUTION_FILE_DATE}-head
 fi
 
 distribution_executable_name="openocd"
