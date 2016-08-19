@@ -139,7 +139,7 @@ then
   if [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
   then
     # Download helper script from SF git.
-    echo "Downloading helper script... ${build_scripts_url}"
+    echo "Downloading helper script from ${build_scripts_url}"
     curl -L "${build_scripts_url}/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
   fi

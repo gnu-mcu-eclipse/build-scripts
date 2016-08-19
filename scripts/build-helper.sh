@@ -188,7 +188,6 @@ do
         "${install_folder}/${APP_LC_NAME}/INFO.txt"
       do_unix2dos "${install_folder}/${APP_LC_NAME}/INFO.txt"
 
-#### AMBIQ BEGIN ####
       if [ -f "${git_folder}/openocd.bat" ]
       then
           /usr/bin/install -cv -m 644 "${git_folder}/openocd.bat" \
@@ -201,7 +200,6 @@ do
             "${install_folder}/${APP_LC_NAME}/VERSION"
           do_unix2dos "${install_folder}/${APP_LC_NAME}/VERSION"
       fi
-#### AMBIQ END ####
 
       mkdir -p "${install_folder}/${APP_LC_NAME}/gnuarmeclipse"
 

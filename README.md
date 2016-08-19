@@ -16,17 +16,13 @@ The following options can be used to:
 - Create multiple release/development projects.
 - Allow patch releases with containing locally developed changes.
 - Develop and test new features until they are ready for upstreaming.
+- Develop and test new build-scripts.
 
-
-The following options allow a gnuarmeclipse build of OpenOCD and patch releases
-prior to review and approval by the main OpenOCD project. 
-
-The --git-dev-url and --git-rel-url options allows you to switch from the sourceforge gnuarmeclipse openocd repo to a local repo for development and patch releases.
-
+The following command line options are used to override the defaults:
 - Git Development User (user with write access to git repo)
 - Git Development Build User (if the logged in user = db user, development build)
 - Git Project Branch (Broject branch name for release and development)
 - Git Development URL (writeable clone)
 - Git Release URL (read/only clone)
 - Build Scripts URL (Location of build-scripts)
-
+- Work Folder (User specified Work Folder location)

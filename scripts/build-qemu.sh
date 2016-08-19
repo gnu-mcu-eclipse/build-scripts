@@ -113,17 +113,17 @@ do
       shift 2
       ;;
 
+    --no-strip)
+      do_no_strip="y"
+      shift
+      ;;
+
     --build-scripts-url) # Alternate location of build-scripts.
       build_scripts_url=$2
       echo
       echo "build-scripts url: ${build_scripts_url}"
       echo
       shift 2
-      ;;
-
-    --no-strip)
-      do_no_strip="y"
-      shift
       ;;
 
     --win-install-folder) # If blank, installer uses program files.
@@ -350,7 +350,6 @@ LIBPIXMAN_URL="http://cairographics.org/releases/${LIBPIXMAN_ARCHIVE}"
 if [ \( "${ACTION}" == "clean" \) -o \( "${ACTION}" == "cleanall" \) ]
 then
   # Remove most build and temporary folders.
-  echo
   if [ "${ACTION}" == "cleanall" ]
   then
     echo "Remove all the build folders..."
@@ -400,6 +399,7 @@ DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
 
 source "$helper_script" --prepare-prerequisites
 
+
 # ----- Process "preload-images" action. -----
 
 if [ "${ACTION}" == "preload-images" ]
@@ -436,7 +436,6 @@ if [ "${ACTION}" == "build-images" ]
 then
   source "$helper_script" --prepare-docker
 
-  # Remove most build and temporary folders.
   echo
   echo "Build Docker images..."
 
@@ -530,6 +529,7 @@ do_repo_action() {
   fi
 
 }
+
 
 # ----- Process "pull|checkout-dev|checkout-stable" actions. -----
 
@@ -1045,6 +1045,7 @@ then
     \
     bash "configure" \
       --prefix="${install_folder}"
+
   fi
 
   echo

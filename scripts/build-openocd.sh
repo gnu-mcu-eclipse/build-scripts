@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -euo pipefail
 IFS=$'\n\t'
 
@@ -113,17 +112,17 @@ do
       shift 2
       ;;
 
+    --no-strip)
+      do_no_strip="y"
+      shift
+      ;;
+
     --build-scripts-url) # Alternate location of build-scripts.
       build_scripts_url=$2
       echo
       echo "build-scripts url: ${build_scripts_url}"
       echo
       shift 2
-      ;;
-
-    --no-strip)
-      do_no_strip="y"
-      shift
       ;;
 
     --win-install-folder) # If blank, installer uses program files.
@@ -225,7 +224,7 @@ then
   if [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
   then
     # Download helper script from SF git.
-    echo "Downloading helper script... ${build_scripts_url}"
+    echo "Downloading helper script from ${build_scripts_url}"
     curl -L "${build_scripts_url}/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
   fi
@@ -333,6 +332,7 @@ source "$helper_script" --detect-host
 GIT_FOLDER="${WORK_FOLDER}/gnuarmeclipse-${APP_LC_NAME}.git"
 
 DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
+
 
 # ----- Prepare prerequisites. -----
 
@@ -1319,6 +1319,7 @@ fi
 cd "${build_folder}/${APP_LC_NAME}"
 cp config.* "${output_folder}"
 
+
 # ----- Full build, with documentation. -----
 
 if [ ! \( -f "${build_folder}/${APP_LC_NAME}/src/openocd" \) -a \
@@ -1584,11 +1585,6 @@ then
     --target-bits 32 \
     --docker-image ilegeul/debian32:8-gnuarm-gcc-x11-v3
 fi
-
-# ---- Prevent script break because of not found MD5 file without arguments ----
-#sudo mkdir -p ${WORK_FOLDER}/output
-#sudo touch ${WORK_FOLDER}/output/empty.md5
-# ----
 
 cat "${WORK_FOLDER}/output/"*.md5
 
