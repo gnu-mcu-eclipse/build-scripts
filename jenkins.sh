@@ -3,11 +3,7 @@
 
 # For standalone script outside of jenkins.
 [ -n "${HOME}" ] || HOME=$(pwd)
-[ -n "${WORKSPACE}" ] || WORKSPACE=${HOME}
-
-# For standalone script outside of jenkins.
-[ -n "${HOME}" ] || HOME=$(pwd)
-[ -n "${WORKSPACE}" ] || WORKSPACE=${HOME}
+[ -n "${WORKSPACE}" ] || WORKSPACE=$(pwd)
 [ -n "${USER}" ] || USER=$(whoami)
 
 # windows install folder blank for default.
@@ -23,7 +19,7 @@
 # Git development build user.
 [ -n "${git_devbuild_user}" ] || git_devbuild_user=${USER}
 # Location of build-scripts.
-[ -n "{build_scripts_url}" ] || build_scripts_url="https://github.com/rickfoosusa/build-scripts/raw/master"
+[ -n "${build_scripts_url}" ] || build_scripts_url="https://github.com/rickfoosusa/build-scripts/raw/master"
 
 # Clean old git checkout
 sudo rm -rf ${WORKSPACE}/Work/openocd/gnuarmeclipse-openocd.git
@@ -41,6 +37,7 @@ sudo rm -rf ${WORKSPACE}/Work/openocd/output
 # Jenkins clone is only for polling and changes.
 # Work/openocd/gnuarmeclipse.git is what is built.
 # Default location of Work area is HOME, for Jenkins use Workspace.
+set -x
 bash build-scripts/scripts/build-openocd.sh ${BUILDOPTS} \
 --win-install-folder "${win_install_folder}" \
 --git-dev-url "${git_dev_url}" \
@@ -48,4 +45,5 @@ bash build-scripts/scripts/build-openocd.sh ${BUILDOPTS} \
 --git-project-branch "${git_project_branch}" \
 --git-dev-user "${git_dev_user}" \
 --git-devbuild-user "${git_devbuild_user}" \
---build-scripts-url "${build_scripts_url}"
+--build-scripts-url "${build_scripts_url}" \
+--work-folder "${WORKSPACE}" $@

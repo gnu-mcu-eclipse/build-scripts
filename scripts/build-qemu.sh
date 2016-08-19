@@ -50,14 +50,6 @@ else
   WORK_FOLDER=${WORK_FOLDER:-"${HOME}/Work/${APP_LC_NAME}"}
 fi
 
-# ----- Create Work folder. -----
-
-echo
-echo "Using \"${WORK_FOLDER}\" as Work folder..."
-
-mkdir -p "${WORK_FOLDER}"
-
-
 # ----- Parse actions and command line options. -----
 
 ACTION=""
@@ -124,7 +116,7 @@ do
     --build-scripts-url) # Alternate location of build-scripts.
       build_scripts_url=$2
       echo
-      echo "build-scripts location: ${build_scripts_url}"
+      echo "build-scripts url: ${build_scripts_url}"
       echo
       shift 2
       ;;
@@ -159,10 +151,10 @@ do
       shift 2
       ;;
 
-    --git-project-branch) # Project release branch (-dev for development)
+    --git-project-branch) # Project branch (-dev for development)
       git_project_branch=$2
       echo
-      echo "Git project release branch: ${git_project_branch}"
+      echo "Git project branch: ${git_project_branch}"
       echo
       shift 2
       ;;
@@ -183,6 +175,14 @@ do
       shift 2
       ;;
 
+    --work-folder)
+      WORK_FOLDER=$2/Work/${APP_LC_NAME}
+      echo
+      echo "Work Folder: ${WORK_FOLDER}"
+      echo
+      shift 2
+      ;;
+
     --help)
       echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
       echo "Usage:"
@@ -198,6 +198,13 @@ do
   esac
 
 done
+
+# ----- Create Work folder. -----
+
+echo
+echo "Using \"${WORK_FOLDER}\" as Work folder..."
+
+mkdir -p "${WORK_FOLDER}"
 
 # ----- Prepare build scripts. -----
 
@@ -224,8 +231,8 @@ then
     if [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
     then
       # Download helper script from SF git.
-      echo "Downloading helper script..."
-      curl -L "${build_scripts_url}/scripts/build-helper.sh" \
+    echo "Downloading helper script... ${build_scripts_url}"
+    curl -L "${build_scripts_url}/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
     fi
   fi
