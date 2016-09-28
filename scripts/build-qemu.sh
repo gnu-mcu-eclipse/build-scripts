@@ -1629,6 +1629,7 @@ then
       --extra-cflags="-g -pipe -I${install_folder}/include -Wno-missing-format-attribute -Wno-pointer-to-int-cast -D_POSIX=1 -mthreads" \
       --extra-ldflags="-v -L${install_folder}/lib" \
       --target-list="gnuarmeclipse-softmmu" \
+      --enable-debug \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
@@ -1648,6 +1649,7 @@ then
       --extra-cflags="-g -pipe -I${install_folder}/include -Wno-missing-format-attribute -Wno-error=format=" \
       --extra-ldflags="-v -L${install_folder}/lib" \
       --target-list="gnuarmeclipse-softmmu" \
+      --enable-debug \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
@@ -1667,6 +1669,7 @@ then
       --extra-cflags="-g -pipe -I${install_folder}/include -I${MACPORTS_FOLDER}/include -Wno-missing-format-attribute" \
       --extra-ldflags="-v -L${install_folder}/lib -L${MACPORTS_FOLDER}/lib -lX11" \
       --target-list="gnuarmeclipse-softmmu" \
+      --enable-debug \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
