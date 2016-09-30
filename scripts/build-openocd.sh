@@ -120,7 +120,7 @@ do
     --help)
       echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
       echo "Usage:"
-      echo "    bash $0 helper_script [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|cleanall|pull|checkout-dev|checkout-stable|build-images] [--help]"
+      echo "    bash $0 [--helper_script file]  [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|cleanall|pull|checkout-dev|checkout-stable|build-images] [--help]"
       echo
       exit 1
       ;;
@@ -743,8 +743,8 @@ fi
 
 if [ "${target_name}" == "debian" ]
 then
-  echo "Checking chrpath..."
-  chrpath --version
+  #echo "Checking chrpath (no longer needed)..."
+  #chrpath --version
 
   echo "Checking patchelf..."
   patchelf --version
@@ -1117,7 +1117,7 @@ then
     # Be sure all these lines end in '\' to ensure lines are concatenated.
     # On some machines libftdi ends in lib64, so we refer both lib & lib64
     CPPFLAGS="-m${target_bits} -pipe" \
-    LDFLAGS='-Wl,-rpath=\$$ORIGIN -lpthread' \
+    LDFLAGS='-Wl,-lpthread' \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
     \
@@ -1158,12 +1158,6 @@ then
     --enable-vsllink \
     | tee "${output_folder}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
-
-    # Note: a very important detail here is LDFLAGS='-Wl,-rpath=\$$ORIGIN which
-    # adds a special record to the ELF file asking the loader to search for the
-    # libraries first in the same folder where the executable is located. The
-    # task is complicated due to the multiple substitutions that are done on
-    # the way, and need to be escaped.
 
   elif [ "${target_name}" == "osx" ]
   then
@@ -1307,13 +1301,20 @@ then
     do_strip strip "${install_folder}/${APP_LC_NAME}/bin/openocd"
   fi
 
-  # Note: this is a very important detail, 'patchelf' changes rpath
-  # in the ELF file to $ORIGIN, asking the loader to search
-  # for the libraries first in the same folder where the executable is
-  # located.
+  # Note: this is a very important detail, 'patchelf' sets "runpath"
+  # in the ELF file to $ORIGIN, telling the loader to search
+  # for the libraries first in LD_LIBRARY_PATH (if set) and, if not found there,
+  # to look in the same folder where the executable is located -- where
+  # this build script installs the needed libraries. 
+  # Note: LD_LIBRARY_PATH might rarely be set when testing alternate 
+  # versions of the openocd libraries without removing or overwriting 
+  # the installed library files.  
+  # Note: patchelf changes the original "rpath" in the executable (a path 
+  # in the docker container) to "runpath" with the value "$ORIGIN". Also, 
+  # the runpath is set in the installed library files with patchelf to 
+  # $ORIGIN. See patchelf usage in build-helper.sh.
 
-  chrpath --replace '$ORIGIN' \
-    "${install_folder}/${APP_LC_NAME}/bin/openocd"
+  patchelf --set-rpath '$ORIGIN' "${install_folder}/${APP_LC_NAME}/bin/openocd"
 
   echo
   echo "Copying shared libs..."
