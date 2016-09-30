@@ -70,6 +70,16 @@ do
 
         HOST_DISTRO_LC_NAME=$(echo ${HOST_DISTRO_NAME} | tr "[:upper:]" "[:lower:]")
 
+        ## Set a user name on the debian docker container (other than root):
+        ## group name will be the same. Id's will be set to the same value as
+        ## the local *non-root* user running the scripts.
+        ## Not needed for Darwin host (mac osx) just linux.
+        CONTAINER_USERNAME='dumbby'
+        CONTAINER_GROUPNAME=$CONTAINER_USERNAME
+        HOMEDIR='/home/'$CONTAINER_USERNAME
+        GROUP_ID=$(id -g)
+        USER_ID=$(id -u)
+
       else
         echo "Unknown uname ${HOST_UNAME}"
         exit 1
@@ -78,13 +88,8 @@ do
       echo
       echo "Running on ${HOST_DISTRO_NAME} ${HOST_BITS}-bits."
 
-
-      # When running on Docker, the host Work folder is used, if available.
-      HOST_WORK_FOLDER="${WORK_FOLDER}/../../Host/Work/${APP_LC_NAME}"
-
-      DOCKER_HOST_WORK="/Host/Work/${APP_LC_NAME}"
+      DOCKER_HOST_WORK="$HOMEDIR/Work/${APP_LC_NAME}"
       DOCKER_GIT_FOLDER="${DOCKER_HOST_WORK}/${APP_LC_NAME}.git"
-      DOCKER_BUILD="/root/build"
       ;;
 
     --prepare-prerequisites) # -----
@@ -288,10 +293,10 @@ do
         echo "Needed:"
         sort -u /tmp/mylibs
 
-        rpl=$(readelf -d "${distribution_executable_name}" | egrep -i 'rpath' | sed -e 's/.*\[\(.*\)\]/\1/')
+        rpl=$(readelf -d "${distribution_executable_name}" | egrep -i 'runpath' | sed -e 's/.*\[\(.*\)\]/\1/')
         if [ "$rpl" != '$ORIGIN' ]
         then
-          echo "Wrong rpath $rpl"
+          echo "Wrong runpath $rpl"
           exit 1
         fi
         popd
@@ -505,6 +510,26 @@ do_compute_md5() {
   echo "MD5: $(cat ${md5_file})"
 }
 
+### FUNCTIONS used only by linux host
+create_user_cmd()
+{
+  echo \
+    groupadd -f -g $GROUP_ID $CONTAINER_GROUPNAME '&&' \
+    useradd -u $USER_ID -g $CONTAINER_GROUPNAME $CONTAINER_USERNAME '&&' \
+    mkdir --parent $HOMEDIR '&&' \
+    chown -R $CONTAINER_USERNAME:$CONTAINER_GROUPNAME $HOMEDIR '&&' \
+    chmod a+x $DOCKER_HOST_WORK/scripts/build.sh
+}
+execute_su_cmd()
+{
+  echo \
+        su -l $CONTAINER_USERNAME -c \"${docker_script}
+}
+full_container_cmd()
+{
+  echo "$(create_user_cmd) && $(execute_su_cmd)"
+}
+
 # v===========================================================================v
 run_docker_script() {
 
@@ -538,17 +563,39 @@ run_docker_script() {
   echo
   echo "Running \"$(basename "${docker_script}")\" script inside \"${docker_container_name}\" container, image \"${docker_image}\"..."
 
-  # Run the second pass script in a fresh Docker container.
-  docker run \
-    --name="${docker_container_name}" \
-    --tty \
-    --hostname "docker" \
-    --workdir="/root" \
-    --volume="${WORK_FOLDER}/..:/Host/Work" \
-    ${docker_image} \
-    /bin/bash "${docker_script}" \
-      --docker-container-name "${docker_container_name}" \
-      $@
+  # Run the second pass script in a fresh Docker container. Variation between osx and 
+  # linux hosts due to output file permissions.
+  if [ "${HOST_UNAME}" == "Darwin" ]
+  then
+    # mac osx host
+    docker run \
+      --name="${docker_container_name}" \
+      --tty \
+      --hostname "docker" \
+      --workdir="/root" \
+      --volume="${WORK_FOLDER}/..:/Host/Work" \
+      ${docker_image} \
+      /bin/bash "${docker_script}" \
+        --docker-container-name "${docker_container_name}" \
+        $@
+  else
+    # Linux host
+
+    f_c_c_plus="'$(full_container_cmd) $@ \" '"
+    # Note: the entire (long) argument to the -c option of su must be in double quotes
+    # to run properly on debian in docker.
+    # Uncomment for debugging escape/quote issues in making f_c_c_plus:
+    #echo f_c_c_plus = $f_c_c_plus
+
+    eval docker run \
+      --name="${docker_container_name}" \
+      --tty \
+      --hostname "docker" \
+      --volume="${WORK_FOLDER}/..:$HOMEDIR/Work" \
+      --workdir=$HOMEDIR \
+      ${docker_image} \
+      /bin/bash -c $f_c_c_plus
+  fi
 
   # Remove the container.
   docker rm --force "${docker_container_name}"
@@ -591,9 +638,9 @@ do_copy_user_so() {
   if [ ! -z "${ILIB}" ]
   then
     echo "Found user ${ILIB}"
-    set +e
+
+    # Add "runpath" in library with value $ORIGIN.
     patchelf --set-rpath '$ORIGIN' "${ILIB}"
-    set -e
 
     ILIB_BASE="$(basename ${ILIB})"
     /usr/bin/install -v -c -m 644 "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin"
@@ -606,9 +653,9 @@ do_copy_user_so() {
     if [ ! -z "${ILIB}" ]
     then
       echo "Found user 2 ${ILIB}"
-      set +e
+
+      # Add "runpath" in library with value $ORIGIN.
       patchelf --set-rpath '$ORIGIN' "${ILIB}"
-      set -e
 
       ILIB_BASE="$(basename ${ILIB})"
       /usr/bin/install -v -c -m 644 "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin"
@@ -620,9 +667,9 @@ do_copy_user_so() {
       if [ ! -z "${ILIB}" ]
       then
         echo "Found user 3 ${ILIB}"
-        set +e
+
+        # Add "runpath" in library with value $ORIGIN.
         patchelf --set-rpath '$ORIGIN' "${ILIB}"
-        set -e
 
         ILIB_BASE="$(basename ${ILIB})"
         /usr/bin/install -v -c -m 644 "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin"
