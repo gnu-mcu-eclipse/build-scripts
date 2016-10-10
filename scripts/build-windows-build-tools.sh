@@ -417,6 +417,18 @@ do
       helper_script="$2"
       shift 2
       ;;
+    --group-id)
+      group_id="$2"
+      shift 2
+      ;;
+    --user-id)
+      user_id="$2"
+      shift 2
+      ;;
+    --host-uname)
+      host_uname="$2"
+      shift 2
+      ;;
     *)
       echo "Unknown option $1, exit."
       exit 1
@@ -548,15 +560,15 @@ cp -v "${install_folder}/make-${MAKE_VERSION}/bin/make.exe" \
 echo
 echo "Copying DLLs..."
 
-if [ "${target_bits}" == "32" ]
-then
-  ls -l "/usr/${cross_compile_prefix}/bin/"*.dll
-  cp -v "/usr/${cross_compile_prefix}/bin/intl.dll" "${install_folder}/${APP_LC_NAME}/bin"
-elif [ "${target_bits}" == "64" ]
-then
-  cp -v "/usr/${cross_compile_prefix}/bin/libintl-8.dll" "${install_folder}/${APP_LC_NAME}/bin"
-  cp -v "/usr/${cross_compile_prefix}/bin/libiconv-2.dll" "${install_folder}/${APP_LC_NAME}/bin"
-fi
+#if [ "${target_bits}" == "32" ]
+#then
+#  ls -l "/usr/${cross_compile_prefix}/bin/"*.dll
+#  cp -v "/usr/${cross_compile_prefix}/bin/intl.dll" "${install_folder}/${APP_LC_NAME}/bin"
+#elif [ "${target_bits}" == "64" ]
+#then
+#  cp -v "/usr/${cross_compile_prefix}/bin/libintl-8.dll" "${install_folder}/${APP_LC_NAME}/bin"
+#  cp -v "/usr/${cross_compile_prefix}/bin/libiconv-2.dll" "${install_folder}/${APP_LC_NAME}/bin"
+#fi
 
 # ----- Build BusyBox. -----
 
@@ -702,6 +714,21 @@ makensis -V4 -NOCD \
 result="$?"
 
 do_compute_md5 "md5sum" "-t" "${distribution_file}"
+
+if [ "${host_uname}" == "Linux" ]
+then
+  # Set the owner of the folder and files created by the docker debian 
+  # container to match the user running the build script on the host. 
+  # When run on linux host, these folders and their content remain owned 
+  # by root if this is not done. However, when host is osx (mac os), the 
+  # owner produced by boot2docker is the same as the osx user, so an 
+  # ownership change is not done. 
+  echo
+  echo "Changing owner to non-root Linux user..."
+  chown -R ${user_id}:${group_id} ${work_folder}/build
+  chown -R ${user_id}:${group_id} ${work_folder}/install
+  chown -R ${user_id}:${group_id} ${work_folder}/output
+fi
 
 # Requires ${distribution_file} and ${result}
 source "$helper_script" --completed

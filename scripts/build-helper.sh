@@ -85,6 +85,9 @@ do
       DOCKER_HOST_WORK="/Host/Work/${APP_LC_NAME}"
       DOCKER_GIT_FOLDER="${DOCKER_HOST_WORK}/${APP_LC_NAME}.git"
       DOCKER_BUILD="/root/build"
+
+      GROUP_ID=$(id -g)
+      USER_ID=$(id -u)
       ;;
 
     --prepare-prerequisites) # -----
@@ -338,6 +341,21 @@ do
         result="$?"
 
       fi
+
+      if [ "${host_uname}" == "Linux" ]
+      then
+        # Set the owner of the folder and files created by the docker debian 
+        # container to match the user running the build script on the host. 
+        # When run on linux host, these folders and their content remain owned 
+        # by root if this is not done. However, when host is osx (mac os), the 
+        # owner produced by boot2docker is the same as the osx user, so an 
+        # ownership change is not done. 
+        echo
+        echo "Changing owner to non-root Linux user..."
+        chown -R ${user_id}:${group_id} ${work_folder}/build
+        chown -R ${user_id}:${group_id} ${work_folder}/install
+        chown -R ${user_id}:${group_id} ${work_folder}/output
+      fi
       ;;
 
     --completed)
@@ -474,7 +492,10 @@ do_build_target() {
       --install-folder "${DOCKER_HOST_WORK}/install/${target_folder}" \
       --download-folder "${DOCKER_HOST_WORK}/download" \
       --helper-script "${DOCKER_HOST_WORK}/scripts/build-helper.sh" \
-      --work-folder "${DOCKER_HOST_WORK}"
+      --work-folder "${DOCKER_HOST_WORK}" \
+      --group-id "${GROUP_ID}" \
+      --user-id "${USER_ID}" \
+      --host-uname "${HOST_UNAME}"
 
   else
 
@@ -488,7 +509,8 @@ do_build_target() {
       --install-folder "${WORK_FOLDER}/install/${target_folder}" \
       --download-folder "${WORK_FOLDER}/download" \
       --helper-script "${WORK_FOLDER}/scripts/build-helper.sh" \
-      --work-folder "${WORK_FOLDER}"
+      --work-folder "${WORK_FOLDER}" \
+      --host-uname "${HOST_UNAME}"
 
   fi
 }
