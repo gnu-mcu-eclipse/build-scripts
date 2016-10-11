@@ -856,16 +856,6 @@ then
 
 fi
 
-if [ "${target_name}" == "debian" ]
-then
-  # for glib
-  # apt-get install libffi-dev
-  # apt-get -y install libx11-dev libxext-dev
-  # apt-get -y install chrpath
-  # apt-get -y install patchelf
-  echo
-fi
-
 mkdir -p ${build_folder}
 cd ${build_folder}
 
@@ -898,9 +888,6 @@ fi
 
 if [ "${target_name}" == "debian" ]
 then
-  echo "Checking chrpath..."
-  chrpath --version
-
   echo "Checking patchelf..."
   patchelf --version
 fi
@@ -1783,12 +1770,24 @@ then
     do_strip strip "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
   fi
 
-  # Note: this is a very important detail, 'patchelf' changes rpath
-  # in the ELF file to $ORIGIN, asking the loader to search
-  # for the libraries first in the same folder where the executable is
-  # located.
-
-  chrpath --replace '$ORIGIN' \
+  # This is a very important detail: 'patchelf' sets "runpath"
+  # in the ELF file to $ORIGIN, telling the loader to search
+  # for the libraries first in LD_LIBRARY_PATH (if set) and, if not found there,
+  # to look in the same folder where the executable is located -- where
+  # this build script installs the required libraries. 
+  # Note: LD_LIBRARY_PATH can be set by a developer when testing alternate 
+  # versions of the openocd libraries without removing or overwriting 
+  # the installed library files -- not done by the typical user. 
+  # Note: patchelf changes the original "rpath" in the executable (a path 
+  # in the docker container) to "runpath" with the value "$ORIGIN". rpath 
+  # instead or runpath could be set to $ORIGIN but rpath is searched before
+  # LD_LIBRARY_PATH which requires an installed library be deleted or
+  # overwritten to test or use an alternate version. In addition, the usage of
+  # rpath is deprecated. See man ld.so for more info.  
+  # Also, runpath is added to the installed library files using patchelf, with 
+  # value $ORIGIN, in the same way. See patchelf usage in build-helper.sh.
+  #
+  patchelf --set-rpath '$ORIGIN' \
     "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
 
   echo
