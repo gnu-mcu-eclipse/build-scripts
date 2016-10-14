@@ -819,6 +819,18 @@ do
       helper_script="$2"
       shift 2
       ;;
+    --group-id)
+      group_id="$2"
+      shift 2
+      ;;
+    --user-id)
+      user_id="$2"
+      shift 2
+      ;;
+    --host-uname)
+      host_uname="$2"
+      shift 2
+      ;;
     *)
       echo "Unknown option $1, exit."
       exit 1
