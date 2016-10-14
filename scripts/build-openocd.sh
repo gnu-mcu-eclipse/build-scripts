@@ -714,12 +714,6 @@ then
 
 fi
 
-if [ "${target_name}" == "debian" ]
-then
-  # apt-get -y install patchelf
-  echo
-fi
-
 mkdir -p ${build_folder}
 cd ${build_folder}
 
@@ -755,9 +749,6 @@ fi
 
 if [ "${target_name}" == "debian" ]
 then
-  echo "Checking chrpath..."
-  chrpath --version
-
   echo "Checking patchelf..."
   patchelf --version
 fi
@@ -1129,7 +1120,7 @@ then
     # Be sure all these lines end in '\' to ensure lines are concatenated.
     # On some machines libftdi ends in lib64, so we refer both lib & lib64
     CPPFLAGS="-m${target_bits} -pipe" \
-    LDFLAGS='-Wl,-rpath=\$$ORIGIN -lpthread' \
+    LDFLAGS='-Wl,-lpthread' \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
     \
@@ -1170,12 +1161,6 @@ then
     --enable-vsllink \
     | tee "${output_folder}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
-
-    # Note: a very important detail here is LDFLAGS='-Wl,-rpath=\$$ORIGIN which
-    # adds a special record to the ELF file asking the loader to search for the
-    # libraries first in the same folder where the executable is located. The
-    # task is complicated due to the multiple substitutions that are done on
-    # the way, and need to be escaped.
 
   elif [ "${target_name}" == "osx" ]
   then
@@ -1319,13 +1304,24 @@ then
     do_strip strip "${install_folder}/${APP_LC_NAME}/bin/openocd"
   fi
 
-  # Note: this is a very important detail, 'patchelf' changes rpath
-  # in the ELF file to $ORIGIN, asking the loader to search
-  # for the libraries first in the same folder where the executable is
-  # located.
-
-  chrpath --replace '$ORIGIN' \
-    "${install_folder}/${APP_LC_NAME}/bin/openocd"
+  # This is a very important detail: 'patchelf' sets "runpath"
+  # in the ELF file to $ORIGIN, telling the loader to search
+  # for the libraries first in LD_LIBRARY_PATH (if set) and, if not found there,
+  # to look in the same folder where the executable is located -- where
+  # this build script installs the required libraries. 
+  # Note: LD_LIBRARY_PATH can be set by a developer when testing alternate 
+  # versions of the openocd libraries without removing or overwriting 
+  # the installed library files -- not done by the typical user. 
+  # Note: patchelf changes the original "rpath" in the executable (a path 
+  # in the docker container) to "runpath" with the value "$ORIGIN". rpath 
+  # instead or runpath could be set to $ORIGIN but rpath is searched before
+  # LD_LIBRARY_PATH which requires an installed library be deleted or
+  # overwritten to test or use an alternate version. In addition, the usage of
+  # rpath is deprecated. See man ld.so for more info.  
+  # Also, runpath is added to the installed library files using patchelf, with 
+  # value $ORIGIN, in the same way. See patchelf usage in build-helper.sh.
+  #
+  patchelf --set-rpath '$ORIGIN' "${install_folder}/${APP_LC_NAME}/bin/openocd"
 
   echo
   echo "Copying shared libs..."

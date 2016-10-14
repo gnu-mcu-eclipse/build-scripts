@@ -291,10 +291,10 @@ do
         echo "Needed:"
         sort -u /tmp/mylibs
 
-        rpl=$(readelf -d "${distribution_executable_name}" | egrep -i 'rpath' | sed -e 's/.*\[\(.*\)\]/\1/')
+        rpl=$(readelf -d "${distribution_executable_name}" | egrep -i 'runpath' | sed -e 's/.*\[\(.*\)\]/\1/')
         if [ "$rpl" != '$ORIGIN' ]
         then
-          echo "Wrong rpath $rpl"
+          echo "Wrong runpath $rpl"
           exit 1
         fi
         popd
@@ -613,9 +613,9 @@ do_copy_user_so() {
   if [ ! -z "${ILIB}" ]
   then
     echo "Found user ${ILIB}"
-    set +e
+
+    # Add "runpath" in library with value $ORIGIN.
     patchelf --set-rpath '$ORIGIN' "${ILIB}"
-    set -e
 
     ILIB_BASE="$(basename ${ILIB})"
     /usr/bin/install -v -c -m 644 "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin"
@@ -628,9 +628,9 @@ do_copy_user_so() {
     if [ ! -z "${ILIB}" ]
     then
       echo "Found user 2 ${ILIB}"
-      set +e
+
+      # Add "runpath" in library with value $ORIGIN.
       patchelf --set-rpath '$ORIGIN' "${ILIB}"
-      set -e
 
       ILIB_BASE="$(basename ${ILIB})"
       /usr/bin/install -v -c -m 644 "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin"
@@ -642,9 +642,9 @@ do_copy_user_so() {
       if [ ! -z "${ILIB}" ]
       then
         echo "Found user 3 ${ILIB}"
-        set +e
+
+        # Add "runpath" in library with value $ORIGIN.
         patchelf --set-rpath '$ORIGIN' "${ILIB}"
-        set -e
 
         ILIB_BASE="$(basename ${ILIB})"
         /usr/bin/install -v -c -m 644 "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin"
