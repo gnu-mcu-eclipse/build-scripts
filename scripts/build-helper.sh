@@ -141,16 +141,8 @@ do
 
       if [ "${HOST_UNAME}" == "Darwin" ]
       then
-        echo "Checking boot2docker..."
-        if [ $(boot2docker status) == "running" ]
-        then
-          echo "boot2docker running."
-        else
-          echo "Starting boot2docker..."
-          boot2docker start
-        fi
         echo "Preparing Docker environment..."
-        eval "$(boot2docker shellinit)"
+        eval "$(docker-machine env default)"
       fi
       ;;
 
