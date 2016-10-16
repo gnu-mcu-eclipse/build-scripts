@@ -1,6 +1,21 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+
+# -----------------------------------------------------------------------------
+# Safety settings (see https://gist.github.com/ilg-ul/383869cbb01f61a51c4d).
+
+if [[ ! -z ${DEBUG} ]]
+then
+  set -x # Activate the expand mode if DEBUG is anything but empty.
+fi
+
+set -o errexit # Exit if command failed.
+set -o pipefail # Exit if pipe failed.
+set -o nounset # Exit if variable not set.
+
+# Remove the initial space and instead use '\n'.
 IFS=$'\n\t'
+
+# -----------------------------------------------------------------------------
 
 # Script to cross build the 32/64-bit Windows version of Build Tools 
 # with MinGW-w64 on GNU/Linux.
@@ -63,7 +78,7 @@ while [ $# -gt 0 ]
 do
   case "$1" in
 
-    clean|pull|checkout-dev|checkout-stable|build-images|preload-images)
+    clean|cleanall|pull|checkout-dev|checkout-stable|build-images|preload-images)
       ACTION="$1"
       shift
       ;;
@@ -90,7 +105,7 @@ do
     --help)
       echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
       echo "Usage:"
-      echo "    bash $0 [--helper-script file.sh] [--win32] [--win64] [--all] [clean|pull|checkput-dev|checkout-stable|build-images] [--help]"
+      echo "    bash $0 [--helper-script file.sh] [--win32] [--win64] [--all] [clean|cleanall|pull|checkput-dev|checkout-stable|build-images] [--help]"
       echo
       exit 1
       ;;
@@ -145,19 +160,60 @@ helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
 
 BUILD_FOLDER="${WORK_FOLDER}/build"
 
+# For updates, please check the corresponding pages.
+
+# The make executable is built using the source package from  
+# the open source MSYS2 project.
+# https://sourceforge.net/projects/msys2/
+
+MSYS2_MAKE_PACK_URL_BASE="http://sourceforge.net/projects/msys2/files"
+
+# http://sourceforge.net/projects/msys2/files/REPOS/MSYS2/Sources/
+# http://sourceforge.net/projects/msys2/files/REPOS/MSYS2/Sources/make-4.1-3.src.tar.gz/download
+
+MAKE_VERSION="4.1"
+MSYS2_MAKE_VERSION_RELEASE="${MAKE_VERSION}-4"
+
+MSYS2_MAKE_PACK_ARCH="make-${MSYS2_MAKE_VERSION_RELEASE}.src.tar.gz"
+MSYS2_MAKE_PACK_URL="${MSYS2_MAKE_PACK_URL_BASE}/REPOS/MSYS2/Sources/${MSYS2_MAKE_PACK_ARCH}"
+
+
+# http://intgat.tigress.co.uk/rmy/busybox/index.html
+# https://github.com/rmyorston/busybox-w32
+
+BUSYBOX_COMMIT="9fe16f6102d8ab907c056c484988057904092c06"
+# BUSYBOX_COMMIT=master
+BUSYBOX_ARCHIVE="${BUSYBOX_COMMIT}.zip"
+BUSYBOX_URL="https://github.com/rmyorston/busybox-w32/archive/${BUSYBOX_ARCHIVE}"
+
+BUSYBOX_SRC_FOLDER="${WORK_FOLDER}/busybox-w32-${BUSYBOX_COMMIT}"
+
+
 # ----- Process actions. -----
 
-if [ "${ACTION}" == "clean" ]
+if [ \( "${ACTION}" == "clean" \) -o \( "${ACTION}" == "cleanall" \) ]
 then
   # Remove most build and temporary folders.
   echo
-  echo "Remove most of the build folders..."
+  if [ "${ACTION}" == "cleanall" ]
+  then
+    echo "Remove all the build folders..."
+  else
+    echo "Remove most of the build folders (except output)..."
+  fi
 
   rm -rf "${BUILD_FOLDER}"
+  rm -rf "${WORK_FOLDER}/install"
+
   rm -rf "${WORK_FOLDER}/msys2"
   rm -rf "${WORK_FOLDER}/install"
 
   rm -rf "${WORK_FOLDER}/scripts"
+
+  if [ "${ACTION}" == "cleanall" ]
+  then
+    rm -rf "${WORK_FOLDER}/output"
+  fi
 
   echo
   echo "Clean completed. Proceed with a regular build."
@@ -177,19 +233,17 @@ GIT_FOLDER="${WORK_FOLDER}/gnuarmeclipse-${APP_LC_NAME}.git"
 
 DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
 
+
 # ----- Prepare prerequisites. -----
 
 source "$helper_script" --prepare-prerequisites
-
-if [ -n "${DO_BUILD_WIN32}${DO_BUILD_WIN64}" ]
-then
-  source "$helper_script" --prepare-docker
-fi
 
 # ----- Process "preload-images" action. -----
 
 if [ "${ACTION}" == "preload-images" ]
 then
+  source "$helper_script" --prepare-docker
+
   echo
   echo "Check/Preload Docker images..."
 
@@ -229,6 +283,13 @@ then
   exit 0
 fi
 
+# ----- Prepare Docker. -----
+
+if [ -n "${DO_BUILD_WIN32}${DO_BUILD_WIN64}" ]
+then
+  source "$helper_script" --prepare-docker
+fi
+
 # ----- Check some more prerequisites. -----
 
 echo "Checking host automake..."
@@ -257,11 +318,11 @@ then
   then
     # Shortcut for ilg, who has full access to the repo.
     echo
-    echo "Enter SourceForge password for git clone"
-    git clone ssh://ilg-ul@git.code.sf.net/p/gnuarmeclipse/${APP_LC_NAME} gnuarmeclipse-${APP_LC_NAME}.git
+    echo "If asked, enter ${USER} GitHub password for git clone"
+    git clone https://github.com/gnuarmeclipse/build-tools.git gnuarmeclipse-${APP_LC_NAME}.git
   else
     # For regular read/only access, use the git url.
-    git clone http://git.code.sf.net/p/gnuarmeclipse/${APP_LC_NAME} gnuarmeclipse-${APP_LC_NAME}.git
+    git clone http://github.com/gnuarmeclipse/build-tools.git gnuarmeclipse-${APP_LC_NAME}.git
   fi
 
 fi
@@ -280,18 +341,6 @@ source "$helper_script" "--get-current-date"
 # The make executable is built using the source package from  
 # the open source MSYS2 project.
 # https://sourceforge.net/projects/msys2/
-
-MSYS2_MAKE_PACK_URL_BASE="http://sourceforge.net/projects/msys2/files"
-
-# http://sourceforge.net/projects/msys2/files/REPOS/MSYS2/Sources/
-# http://sourceforge.net/projects/msys2/files/REPOS/MSYS2/Sources/make-4.1-3.src.tar.gz/download
-
-
-MAKE_VERSION="4.1"
-MSYS2_MAKE_VERSION_RELEASE="${MAKE_VERSION}-4"
-
-MSYS2_MAKE_PACK_ARCH="make-${MSYS2_MAKE_VERSION_RELEASE}.src.tar.gz"
-MSYS2_MAKE_PACK_URL="${MSYS2_MAKE_PACK_URL_BASE}/REPOS/MSYS2/Sources/${MSYS2_MAKE_PACK_ARCH}"
 
 if [ ! -f "${DOWNLOAD_FOLDER}/${MSYS2_MAKE_PACK_ARCH}" ]
 then
@@ -313,18 +362,11 @@ then
   tar -xvf "${DOWNLOAD_FOLDER}/${MSYS2_MAKE_PACK_ARCH}"
 fi
 
+# The actual unpack will be done later, directly in the build folder.
 
 # ----- Get BusyBox. -----
 
 # http://intgat.tigress.co.uk/rmy/busybox/index.html
-# https://github.com/rmyorston/busybox-w32
-
-BUSYBOX_COMMIT="9fe16f6102d8ab907c056c484988057904092c06"
-# BUSYBOX_COMMIT=master
-BUSYBOX_ARCHIVE="${BUSYBOX_COMMIT}.zip"
-BUSYBOX_URL="https://github.com/rmyorston/busybox-w32/archive/${BUSYBOX_ARCHIVE}"
-
-BUSYBOX_SRC_FOLDER="${WORK_FOLDER}/busybox-w32-${BUSYBOX_COMMIT}"
 
 if [ ! -f "${DOWNLOAD_FOLDER}/${BUSYBOX_ARCHIVE}" ]
 then
@@ -332,6 +374,7 @@ then
   curl -L "${BUSYBOX_URL}" --output "${BUSYBOX_ARCHIVE}"
 fi
 
+# The unpack will be done later, directly in the build folder.
 
 # v===========================================================================v
 # Create the build script (needs to be separate for Docker).
@@ -343,11 +386,31 @@ rm -f "${script_file}"
 mkdir -p "$(dirname ${script_file})"
 touch "${script_file}"
 
+# Note: EOF is quoted to prevent substitutions here.
+cat <<'EOF' >> "${script_file}"
+#!/usr/bin/env bash
+
+# -----------------------------------------------------------------------------
+# Safety settings (see https://gist.github.com/ilg-ul/383869cbb01f61a51c4d).
+
+if [[ ! -z ${DEBUG} ]]
+then
+  set -x # Activate the expand mode if DEBUG is anything but empty.
+fi
+
+set -o errexit # Exit if command failed.
+set -o pipefail # Exit if pipe failed.
+set -o nounset # Exit if variable not set.
+
+# Remove the initial space and instead use '\n'.
+IFS=$'\n\t'
+
+# -----------------------------------------------------------------------------
+
+EOF
+
 # Note: EOF is not quoted to allow local substitutions.
 cat <<EOF >> "${script_file}"
-#!/bin/bash
-set -euo pipefail
-IFS=\$'\n\t'
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
@@ -360,6 +423,15 @@ BUSYBOX_COMMIT="${BUSYBOX_COMMIT}"
 BUSYBOX_ARCHIVE="${BUSYBOX_ARCHIVE}"
 
 EOF
+
+# Propagate DEBUG to guest.
+set +u
+if [[ ! -z ${DEBUG} ]]
+then
+  echo "DEBUG=${DEBUG}" "${script_file}"
+  echo
+fi
+set -u
 
 # Note: EOF is quoted to prevent substitutions here.
 cat <<'EOF' >> "${script_file}"
@@ -490,14 +562,11 @@ md5sum --version
 rm -rf "${output_folder}"
 mkdir -p "${output_folder}"
 
-# ----- Create the build folder. -----
-
-mkdir -p "${build_folder}/${APP_LC_NAME}"
-
 
 # ----- Build make. -----
 
 make_build_folder="${build_folder}/make-${MAKE_VERSION}"
+
 if [ ! -d "${make_build_folder}" ]
 then
   mkdir -p "${build_folder}"
@@ -505,7 +574,9 @@ then
   cd "${build_folder}"
   echo
   echo "Unpacking ${MAKE_ARCH}..."
+  set +e
   tar -xvf "${work_folder}/msys2/make/${MAKE_ARCH}"
+  set -e
 
   cd "${make_build_folder}"
   patch -p1 -i "${work_folder}/msys2/make/make-autoconf.patch"
@@ -513,6 +584,8 @@ fi
 
 if [ ! -f "${make_build_folder}/config.h" ]
 then
+
+  cd "${make_build_folder}"
 
   echo
   echo "Running make autoreconf..."
@@ -557,18 +630,9 @@ mkdir -p "${install_folder}/${APP_LC_NAME}/bin"
 cp -v "${install_folder}/make-${MAKE_VERSION}/bin/make.exe" \
  "${install_folder}/${APP_LC_NAME}/bin"
 
-echo
-echo "Copying DLLs..."
+# ----- Copy dynamic libraries to the install bin folder. -----
 
-#if [ "${target_bits}" == "32" ]
-#then
-#  ls -l "/usr/${cross_compile_prefix}/bin/"*.dll
-#  cp -v "/usr/${cross_compile_prefix}/bin/intl.dll" "${install_folder}/${APP_LC_NAME}/bin"
-#elif [ "${target_bits}" == "64" ]
-#then
-#  cp -v "/usr/${cross_compile_prefix}/bin/libintl-8.dll" "${install_folder}/${APP_LC_NAME}/bin"
-#  cp -v "/usr/${cross_compile_prefix}/bin/libiconv-2.dll" "${install_folder}/${APP_LC_NAME}/bin"
-#fi
+# No DLLs required.
 
 # ----- Build BusyBox. -----
 
@@ -607,6 +671,9 @@ then
 
   echo 
   echo "Running BusyBox make..."
+
+  # Not used.
+  cflags="-Wno-format-extra-args -Wno-format -Wno-overflow -Wno-unused-variable -Wno-implicit-function-declaration -Wno-unused-parameter -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-strict-prototypes -Wno-old-style-definition -Wno-implicit-function-declaration"
 
   cd "${busybox_build_folder}"
   if [ ${target_bits} == "32" ]
