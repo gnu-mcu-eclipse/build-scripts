@@ -1,6 +1,21 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+
+# -----------------------------------------------------------------------------
+# Safety settings (see https://gist.github.com/ilg-ul/383869cbb01f61a51c4d).
+
+if [[ ! -z ${DEBUG} ]]
+then
+  set -x # Activate the expand mode if DEBUG is anything but empty.
+fi
+
+set -o errexit # Exit if command failed.
+set -o pipefail # Exit if pipe failed.
+set -o nounset # Exit if variable not set.
+
+# Remove the initial space and instead use '\n'.
 IFS=$'\n\t'
+
+# -----------------------------------------------------------------------------
 
 # Script to build the GNU ARM Eclipse OpenOCD distribution packages.
 #
@@ -325,7 +340,7 @@ then
   exit 0
 fi
 
-# ----- Start Docker, if needed. -----
+# ----- Prepare Docker, if needed. -----
 
 if [ -n "${DO_BUILD_WIN32}${DO_BUILD_WIN64}${DO_BUILD_DEB32}${DO_BUILD_DEB64}" ]
 then
@@ -346,6 +361,14 @@ tar --version
 echo "Checking host unzip..."
 unzip | grep UnZip
 
+echo "Checking host makeinfo..."
+makeinfo --version | grep 'GNU texinfo'
+makeinfo_ver=$(makeinfo --version | grep 'GNU texinfo' | sed -e 's/.*) //' -e 's/\..*//')
+if [ "${makeinfo_ver}" -lt "6" ]
+then
+  echo "makeinfo too old, abort."
+  exit 1
+fi
 
 do_repo_action() {
 
@@ -369,7 +392,7 @@ do_repo_action() {
     echo
     if [ "${USER}" == "ilg" ]
     then
-      echo "Enter SourceForge password for git pull"
+      echo "If asked, enter ${USER} GitHub password for git pull"
     fi
 
     cd "${GIT_FOLDER}"
@@ -432,11 +455,11 @@ then
   then
     # Shortcut for ilg, who has full access to the repo.
     echo
-    echo "Enter SourceForge password for git clone"
-    git clone ssh://ilg-ul@git.code.sf.net/p/gnuarmeclipse/openocd gnuarmeclipse-${APP_LC_NAME}.git
+    echo "If asked, enter ${USER} GitHub password for git clone"
+    git clone https://github.com/gnuarmeclipse/openocd.git gnuarmeclipse-${APP_LC_NAME}.git
   else
     # For regular read/only access, use the git url.
-    git clone http://git.code.sf.net/p/gnuarmeclipse/openocd gnuarmeclipse-${APP_LC_NAME}.git
+    git clone http://github.com/gnuarmeclipse/openocd.git gnuarmeclipse-${APP_LC_NAME}.git
   fi
 
   # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
@@ -455,13 +478,12 @@ fi
 
 # Get the current Git branch name, to know if we are building the stable or
 # the development release.
-cd "${GIT_FOLDER}"
-GIT_HEAD=$(git symbolic-ref -q --short HEAD)
+source "$helper_script" "--get-git-head"
 
 # ----- Get current date. -----
 
 # Use the UTC date as version in the name of the distribution file.
-DISTRIBUTION_FILE_DATE=${DISTRIBUTION_FILE_DATE:-$(date -u +%Y%m%d%H%M)}
+source "$helper_script" "--get-current-date"
 
 # ----- Get the USB libraries. -----
 
@@ -586,13 +608,31 @@ rm -f "${script_file}"
 mkdir -p "$(dirname ${script_file})"
 touch "${script_file}"
 
+# Note: EOF is quoted to prevent substitutions here.
+cat <<'EOF' >> "${script_file}"
+#!/usr/bin/env bash
+
+# -----------------------------------------------------------------------------
+# Safety settings (see https://gist.github.com/ilg-ul/383869cbb01f61a51c4d).
+
+if [[ ! -z ${DEBUG} ]]
+then
+  set -x # Activate the expand mode if DEBUG is anything but empty.
+fi
+
+set -o errexit # Exit if command failed.
+set -o pipefail # Exit if pipe failed.
+set -o nounset # Exit if variable not set.
+
+# Remove the initial space and instead use '\n'.
+IFS=$'\n\t'
+
+# -----------------------------------------------------------------------------
+
+EOF
+
 # Note: EOF is not quoted to allow local substitutions.
 cat <<EOF >> "${script_file}"
-#!/bin/bash
-
-# Add x for debug
-set -euo pipefail
-IFS=\$'\n\t'
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
@@ -610,6 +650,15 @@ HIDAPI="${HIDAPI}"
 do_no_strip="${do_no_strip}"
 
 EOF
+
+# Propagate DEBUG to guest.
+set +u
+if [[ ! -z ${DEBUG} ]]
+then
+  echo "DEBUG=${DEBUG}" "${script_file}"
+  echo
+fi
+set -u
 
 # Note: EOF is quoted to prevent substitutions here.
 cat <<'EOF' >> "${script_file}"
