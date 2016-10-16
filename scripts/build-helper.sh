@@ -823,6 +823,54 @@ do_strip() {
   done
 }
 
+# v===========================================================================v
+# $1 = dylib name (like libSDL-1.2.0.dylib)
+do_mac_copy_built_lib() {
+
+  echo
+  ILIB=$1
+  cp -v "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+}
+
+# v===========================================================================v
+# $1 = dylib name (like libSDL-1.2.0.dylib)
+do_mac_change_built_lib() {
+  install_name_tool -change "${install_folder}/lib/$1" \
+    "@executable_path/$1" \
+    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+}
+
+# v===========================================================================v
+# $1 = dylib name (like libXau.6.dylib)
+do_mac_change_lib() {
+  install_name_tool -change "${MACPORTS_FOLDER}/lib/$1" \
+    "@executable_path/$1" \
+    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+}
+
+# v===========================================================================v
+do_mac_copy_lib() {
+
+  echo
+  ILIB=$1
+  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+}
+
+# v===========================================================================v
+do_mac_check_lib() {
+
+  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  local unxp=$(otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}" | grep macports)
+  if [ ! -z $unxp ]
+  then
+    exit 1
+  fi
+}
+
 # ^===========================================================================^
 
 

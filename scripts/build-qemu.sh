@@ -1,6 +1,21 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+
+# -----------------------------------------------------------------------------
+# Safety settings (see https://gist.github.com/ilg-ul/383869cbb01f61a51c4d).
+
+if [[ ! -z ${DEBUG} ]]
+then
+  set -x # Activate the expand mode if DEBUG is anything but empty.
+fi
+
+set -o errexit # Exit if command failed.
+set -o pipefail # Exit if pipe failed.
+set -o nounset # Exit if variable not set.
+
+# Remove the initial space and instead use '\n'.
 IFS=$'\n\t'
+
+# ------------------------------------------------------------------
 
 # Script to build the GNU ARM Eclipse QEMU distribution packages.
 #
@@ -121,7 +136,7 @@ do
     --help)
       echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
       echo "Usage:"
-      echo "    bash $0 [--helper-script file.sh] [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|pull|checkput-dev|checkout-stable|build-images] [--help]"
+      echo "    bash $0 [--helper-script file.sh] [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|cleanall|pull|checkput-dev|checkout-stable|build-images] [--help]"
       echo
       exit 1
       ;;
@@ -182,6 +197,8 @@ fi
 helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
 
 BUILD_FOLDER="${WORK_FOLDER}/build"
+
+# For updates, please check the corresponding pages.
 
 # http://zlib.net
 # https://sourceforge.net/projects/libpng/files/zlib/
@@ -287,6 +304,7 @@ then
 
   rm -rf "${BUILD_FOLDER}"
   rm -rf "${WORK_FOLDER}/install"
+
   rm -rf "${WORK_FOLDER}/${LIBZ_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBPNG_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBJPG_FOLDER}"
@@ -322,6 +340,7 @@ source "$helper_script" --detect-host
 GIT_FOLDER="${WORK_FOLDER}/gnuarmeclipse-${APP_LC_NAME}.git"
 
 DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
+
 
 # ----- Prepare prerequisites. -----
 
@@ -407,6 +426,14 @@ tar --version
 echo "Checking host unzip..."
 unzip | grep UnZip
 
+echo "Checking host makeinfo..."
+makeinfo --version | grep 'GNU texinfo'
+makeinfo_ver=$(makeinfo --version | grep 'GNU texinfo' | sed -e 's/.*) //' -e 's/\..*//')
+if [ "${makeinfo_ver}" -lt "6" ]
+then
+  echo "makeinfo too old, abort."
+  exit 1
+fi
 
 do_repo_action() {
 
@@ -488,7 +515,7 @@ then
   then
     # Shortcut for ilg, who has full access to the repo.
     echo
-    echo "If asked, enter password for git clone"
+    echo "If asked, enter ${USER} GitHub password for git clone"
     git clone https://github.com/gnuarmeclipse/qemu.git gnuarmeclipse-${APP_LC_NAME}.git
   else
     # For regular read/only access, use the http url.
@@ -719,11 +746,31 @@ rm -f "${script_file}"
 mkdir -p "$(dirname ${script_file})"
 touch "${script_file}"
 
+# Note: EOF is quoted to prevent substitutions here.
+cat <<'EOF' >> "${script_file}"
+#!/usr/bin/env bash
+
+# -----------------------------------------------------------------------------
+# Safety settings (see https://gist.github.com/ilg-ul/383869cbb01f61a51c4d).
+
+if [[ ! -z ${DEBUG} ]]
+then
+  set -x # Activate the expand mode if DEBUG is anything but empty.
+fi
+
+set -o errexit # Exit if command failed.
+set -o pipefail # Exit if pipe failed.
+set -o nounset # Exit if variable not set.
+
+# Remove the initial space and instead use '\n'.
+IFS=$'\n\t'
+
+# -----------------------------------------------------------------------------
+
+EOF
+
 # Note: EOF is not quoted to allow local substitutions.
 cat <<EOF >> "${script_file}"
-#!/bin/bash
-set -euo pipefail
-IFS=\$'\n\t'
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
@@ -762,6 +809,15 @@ MACPORTS_FOLDER="${MACPORTS_FOLDER}"
 EOF
 
 fi
+
+# Propagate DEBUG to guest.
+set +u
+if [[ ! -z ${DEBUG} ]]
+then
+  echo "DEBUG=${DEBUG}" "${script_file}"
+  echo
+fi
+set -u
 
 # Note: EOF is quoted to prevent substitutions here.
 cat <<'EOF' >> "${script_file}"
@@ -1858,144 +1914,60 @@ then
 
   echo
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libgnutls.28.dylib" \
-    "@executable_path/libgnutls.28.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libusb-1.0.0.dylib" \
-    "@executable_path/libusb-1.0.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${install_folder}/lib/libz.1.dylib" \
-    "@executable_path/libz.1.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libpixman-1.0.dylib" \
-    "@executable_path/libpixman-1.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${install_folder}/lib/libSDL-1.2.0.dylib" \
-    "@executable_path/libSDL-1.2.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${install_folder}/lib/libSDL_image-1.2.0.dylib" \
-    "@executable_path/libSDL_image-1.2.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libX11.6.dylib" \
-    "@executable_path/libX11.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${install_folder}/lib/libgthread-2.0.0.dylib" \
-    "@executable_path/libgthread-2.0.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${install_folder}/lib/libglib-2.0.0.dylib" \
-    "@executable_path/libglib-2.0.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${install_folder}/lib/libintl.8.dylib" \
-    "@executable_path/libintl.8.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  install_name_tool -change "${install_folder}/lib/libpixman-1.0.dylib" \
-    "@executable_path/libpixman-1.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
+  ILIB=qemu-system-gnuarmeclipse
 
-  echo
-  # Local
-  ILIB=libSDL-1.2.0.dylib
-  cp "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_change_lib libgnutls.30.dylib
+  do_mac_change_lib libusb-1.0.0.dylib
+  do_mac_change_built_lib libz.1.dylib
+  do_mac_change_lib libpixman-1.0.dylib
+  do_mac_change_built_lib libSDL-1.2.0.dylib
+  do_mac_change_built_lib libSDL_image-1.2.0.dylib
+  do_mac_change_lib libX11.6.dylib
+  do_mac_change_built_lib libgthread-2.0.0.dylib
+  do_mac_change_built_lib libglib-2.0.0.dylib
+  do_mac_change_built_lib libintl.8.dylib
+  do_mac_change_built_lib libpixman-1.0.dylib
+  do_mac_change_lib liblzo2.2.dylib
+  do_mac_check_lib
 
-  echo
-  # Local
-  ILIB=libSDL_image-1.2.0.dylib
-  cp "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libSDL-1.2.0.dylib" \
-    "@executable_path/libSDL-1.2.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libpng16.16.dylib" \
-    "@executable_path/libpng16.16.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libjpeg.9.dylib" \
-    "@executable_path/libjpeg.9.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libz.1.dylib" \
-    "@executable_path/libz.1.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_built_lib libSDL-1.2.0.dylib
+  do_mac_check_lib
 
-  echo
-  # Local
-  ILIB=libpng16.16.dylib
-  cp "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libz.1.dylib" \
-    "@executable_path/libz.1.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_built_lib libSDL_image-1.2.0.dylib
+  do_mac_change_built_lib libSDL-1.2.0.dylib
+  do_mac_change_built_lib libpng16.16.dylib
+  do_mac_change_built_lib libjpeg.9.dylib
+  do_mac_change_built_lib libz.1.dylib
+  do_mac_check_lib
 
-  echo
-  # Local
-  ILIB=libjpeg.9.dylib
-  cp "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libz.1.dylib" \
-    "@executable_path/libz.1.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_built_lib libpng16.16.dylib
+  do_mac_change_built_lib libz.1.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libffi.6.dylib
-  cp -v "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_built_lib libjpeg.9.dylib
+  do_mac_change_built_lib libz.1.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libiconv.2.dylib
-  cp -v "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_built_lib libffi.6.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libintl.8.dylib
-  cp -v "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id ${ILIB} "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libiconv.2.dylib" \
-    "@executable_path/libiconv.2.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_built_lib libiconv.2.dylib 
+  do_mac_check_lib
 
+  do_mac_copy_built_lib libintl.8.dylib
+  do_mac_change_built_lib libiconv.2.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libglib-2.0.0.dylib
-  cp "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libiconv.2.dylib" \
-    "@executable_path/libiconv.2.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libintl.8.dylib" \
-    "@executable_path/libintl.8.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_built_lib libglib-2.0.0.dylib
+  do_mac_change_built_lib libiconv.2.dylib
+  do_mac_change_built_lib libintl.8.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libgthread-2.0.0.dylib
-  cp "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libglib-2.0.0.dylib" \
-    "@executable_path/libglib-2.0.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libiconv.2.dylib" \
-    "@executable_path/libiconv.2.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${install_folder}/lib/libintl.8.dylib" \
-    "@executable_path/libintl.8.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_built_lib libgthread-2.0.0.dylib
+  do_mac_change_built_lib libglib-2.0.0.dylib
+  do_mac_change_built_lib libiconv.2.dylib
+  do_mac_change_built_lib libintl.8.dylib
+  do_mac_check_lib
 
   echo
   # Different input name
@@ -2004,171 +1976,83 @@ then
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id ${ILIB} "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_check_lib
 
-  echo
-  ILIB=libgnutls.28.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id libgnutls.28.dylib "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libz.1.dylib" \
-    "@executable_path/libz.1.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libiconv.2.dylib" \
-    "@executable_path/libiconv.2.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libp11-kit.0.dylib" \
-    "@executable_path/libp11-kit.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libtasn1.6.dylib" \
-    "@executable_path/libtasn1.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libnettle.6.dylib" \
-    "@executable_path/libnettle.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libhogweed.4.dylib" \
-    "@executable_path/libhogweed.4.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libgmp.10.dylib" \
-    "@executable_path/libgmp.10.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libintl.8.dylib" \
-    "@executable_path/libintl.8.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libgnutls.30.dylib
+  do_mac_change_lib libz.1.dylib
+  do_mac_change_lib libiconv.2.dylib
+  do_mac_change_lib libp11-kit.0.dylib
+  do_mac_change_lib libtasn1.6.dylib
+  do_mac_change_lib libnettle.6.dylib
+  do_mac_change_lib libhogweed.4.dylib
+  do_mac_change_lib libgmp.10.dylib
+  do_mac_change_lib libintl.8.dylib
+  do_mac_change_lib libidn.11.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libp11-kit.0.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libffi.6.dylib" \
-    "@executable_path/libffi.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libintl.8.dylib" \
-    "@executable_path/libintl.8.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libp11-kit.0.dylib
+  do_mac_change_lib libffi.6.dylib
+  do_mac_change_lib libintl.8.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libtasn1.6.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libtasn1.6.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libnettle.6.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libnettle.6.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libhogweed.4.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libnettle.6.dylib" \
-    "@executable_path/libnettle.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libgmp.10.dylib" \
-    "@executable_path/libgmp.10.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libhogweed.4.dylib
+  do_mac_change_lib libnettle.6.dylib
+  do_mac_change_lib libgmp.10.dylib  
+  do_mac_check_lib
 
-  echo
-  ILIB=libgmp.10.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libgmp.10.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libpixman-1.0.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libpixman-1.0.dylib  
+  do_mac_check_lib
 
-  echo
-  ILIB=libX11.6.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libxcb.1.dylib" \
-    "@executable_path/libxcb.1.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libX11.6.dylib
+  do_mac_change_lib libxcb.1.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libXext.6.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libX11.6.dylib" \
-    "@executable_path/libX11.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libXext.6.dylib
+  do_mac_change_lib libX11.6.dylib
+  do_mac_check_lib
+
+  do_mac_copy_lib liblzo2.2.dylib  
+  do_mac_check_lib
+
+  do_mac_copy_lib libidn.11.dylib
+  do_mac_change_lib libintl.8.dylib
+  do_mac_change_lib libiconv.2.dylib
+  do_mac_check_lib
 
 # No longer neded on 10.11 with latest MacPorts
 if false
 then
-  echo
-  ILIB=libXrandr.2.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libXext.6.dylib" \
-    "@executable_path/libXext.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libXrender.1.dylib" \
-    "@executable_path/libXrender.1.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libX11.6.dylib" \
-    "@executable_path/libX11.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libXrandr.2.dylib
+  do_mac_change_lib libXext.6.dylib
+  do_mac_change_lib libXrender.1.dylib
+  do_mac_change_lib libX11.6.dylib
+  do_mac_check_lib
 fi
 
-  echo
-  ILIB=libXrender.1.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libX11.6.dylib" \
-    "@executable_path/libX11.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libXrender.1.dylib
+  do_mac_change_lib libX11.6.dylib
+  do_mac_check_lib
 
 
-  echo
-  ILIB=libxcb.1.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libXau.6.dylib" \
-    "@executable_path/libXau.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/libXdmcp.6.dylib" \
-    "@executable_path/libXdmcp.6.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libxcb.1.dylib
+  do_mac_change_lib libXau.6.dylib
+  do_mac_change_lib libXdmcp.6.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libXau.6.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libXau.6.dylib
+  do_mac_check_lib
 
-  echo
-  ILIB=libXdmcp.6.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  do_mac_copy_lib libXdmcp.6.dylib
+  do_mac_check_lib
 
   # Do not strip resulting dylib files!
 
