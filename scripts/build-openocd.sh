@@ -1417,39 +1417,25 @@ then
 
   # Post-process dynamic libraries paths to be relative to executable folder.
 
+  ILIB=openocd
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/openocd"
+
   install_name_tool -change "libftdi1.2.dylib" "@executable_path/libftdi1.2.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/openocd"
-  install_name_tool -change "${install_folder}/lib/libusb-1.0.0.dylib" \
-    "@executable_path/libusb-1.0.0.dylib" "${install_folder}/${APP_LC_NAME}/bin/openocd"
-  install_name_tool -change "${install_folder}/lib/libusb-0.1.4.dylib" \
-    "@executable_path/libusb-0.1.4.dylib" "${install_folder}/${APP_LC_NAME}/bin/openocd"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/openocd"
+  do_mac_change_built_lib libusb-1.0.0.dylib
+  do_mac_change_built_lib libusb-0.1.4.dylib
+  do_mac_check_lib
 
-  DLIB="libftdi1.2.dylib"
-  cp "${install_folder}/lib/libftdi1.2.2.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -id "${DLIB}" "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -change "${install_folder}/lib/libusb-1.0.0.dylib" \
-    "@executable_path/libusb-1.0.0.dylib" "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  do_mac_copy_built_lib libftdi1.2.dylib
+  do_mac_change_built_lib libusb-1.0.0.dylib
+  do_mac_check_lib
 
-  DLIB="libusb-0.1.4.dylib"
-  cp "${install_folder}/lib/libusb-0.1.4.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -id "${DLIB}" "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -change "${install_folder}/lib/libusb-1.0.0.dylib" \
-    "@executable_path/libusb-1.0.0.dylib" "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  do_mac_copy_built_lib libusb-0.1.4.dylib
+  do_mac_change_built_lib libusb-1.0.0.dylib
+  do_mac_check_lib
 
-  DLIB="libusb-1.0.0.dylib"
-  cp "${install_folder}/lib/libusb-1.0.0.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  install_name_tool -id "${DLIB}" "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${DLIB}"
+  do_mac_copy_built_lib libusb-1.0.0.dylib
+  do_mac_check_lib
 
 fi
 
