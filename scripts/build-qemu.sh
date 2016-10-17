@@ -176,6 +176,8 @@ then
     curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
     helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
+  else
+    helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
   fi
 else
   if [[ "${helper_script}" != /* ]]
