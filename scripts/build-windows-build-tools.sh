@@ -187,6 +187,10 @@ MSYS2_MAKE_PACK_URL_BASE="http://sourceforge.net/projects/msys2/files"
 MAKE_VERSION="4.1"
 MSYS2_MAKE_VERSION_RELEASE="${MAKE_VERSION}-4"
 
+# 4.2 does not build on Debian 8, it requires gettext-0.19.4.
+# MAKE_VERSION="4.2"
+# MSYS2_MAKE_VERSION_RELEASE="${MAKE_VERSION}-1"
+
 MSYS2_MAKE_PACK_ARCH="make-${MSYS2_MAKE_VERSION_RELEASE}.src.tar.gz"
 MSYS2_MAKE_PACK_URL="${MSYS2_MAKE_PACK_URL_BASE}/REPOS/MSYS2/Sources/${MSYS2_MAKE_PACK_ARCH}"
 
@@ -194,7 +198,9 @@ MSYS2_MAKE_PACK_URL="${MSYS2_MAKE_PACK_URL_BASE}/REPOS/MSYS2/Sources/${MSYS2_MAK
 # http://intgat.tigress.co.uk/rmy/busybox/index.html
 # https://github.com/rmyorston/busybox-w32
 
-BUSYBOX_COMMIT="9fe16f6102d8ab907c056c484988057904092c06"
+# BUSYBOX_COMMIT="9fe16f6102d8ab907c056c484988057904092c06"
+BUSYBOX_COMMIT="977d65c1bbc57f5cdd0c8bfd67c8b5bb1cd390dd"
+
 # BUSYBOX_COMMIT=master
 BUSYBOX_ARCHIVE="${BUSYBOX_COMMIT}.zip"
 BUSYBOX_URL="https://github.com/rmyorston/busybox-w32/archive/${BUSYBOX_ARCHIVE}"
@@ -592,7 +598,10 @@ then
   set -e
 
   cd "${make_build_folder}"
-  patch -p1 -i "${work_folder}/msys2/make/make-autoconf.patch"
+  if [ -f "${work_folder}/msys2/make/make-autoconf.patch" ]
+  then
+    patch -p1 -i "${work_folder}/msys2/make/make-autoconf.patch"
+  fi
 fi
 
 if [ ! -f "${make_build_folder}/config.h" ]
