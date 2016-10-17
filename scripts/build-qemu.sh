@@ -159,6 +159,10 @@ then
   build_script=$(pwd)/$0
 fi
 
+# Copy the current script to Work area, to later copy it into the install folder.
+mkdir -p "${WORK_FOLDER}/scripts"
+cp "${build_script}" "${WORK_FOLDER}/scripts/build-${APP_LC_NAME}.sh"
+
 # ----- Build helper. -----
 
 if [ -z "${helper_script}" ]
