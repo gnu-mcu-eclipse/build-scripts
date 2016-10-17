@@ -475,6 +475,7 @@ do_build_target() {
       --script "${DOCKER_HOST_WORK}/scripts/${script_name}" \
       --docker-image "${docker_image}" \
       --docker-container-name "${APP_LC_NAME}-${target_folder}-build" \
+      --host-uname "${HOST_UNAME}" \
       -- \
       --build-folder "${DOCKER_HOST_WORK}/build/${target_folder}" \
       --target-name "${target_name}" \
@@ -493,6 +494,7 @@ do_build_target() {
 
     run_local_script \
       --script "${script_file}" \
+      --host-uname "${HOST_UNAME}" \
       -- \
       --build-folder "${WORK_FOLDER}/build/${target_folder}" \
       --target-name "${target_name}" \
@@ -537,6 +539,10 @@ run_docker_script() {
         docker_container_name="$2"
         shift 2
         ;;
+      --host-uname)
+        host_uname="$2"
+        shift 2
+        ;;
       --)
         shift
         break;
@@ -553,16 +559,30 @@ run_docker_script() {
   echo "Running \"$(basename "${docker_script}")\" script inside \"${docker_container_name}\" container, image \"${docker_image}\"..."
 
   # Run the second pass script in a fresh Docker container.
-  docker run \
-    --name="${docker_container_name}" \
-    --tty \
-    --hostname "docker" \
-    --workdir="/root" \
-    --volume="${WORK_FOLDER}/..:/Host/Work" \
-    ${docker_image} \
-    /bin/bash "${docker_script}" \
-      --docker-container-name "${docker_container_name}" \
-      $@
+  if [ "${host_uname}" == "Darwin" ]
+  then
+    caffeinate docker run \
+      --name="${docker_container_name}" \
+      --tty \
+      --hostname "docker" \
+      --workdir="/root" \
+      --volume="${WORK_FOLDER}/..:/Host/Work" \
+      ${docker_image} \
+      /bin/bash "${docker_script}" \
+        --docker-container-name "${docker_container_name}" \
+        $@
+  else
+    docker run \
+      --name="${docker_container_name}" \
+      --tty \
+      --hostname "docker" \
+      --workdir="/root" \
+      --volume="${WORK_FOLDER}/..:/Host/Work" \
+      ${docker_image} \
+      /bin/bash "${docker_script}" \
+        --docker-container-name "${docker_container_name}" \
+        $@
+  fi
 
   # Remove the container.
   docker rm --force "${docker_container_name}"
