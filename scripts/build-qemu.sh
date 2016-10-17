@@ -65,13 +65,14 @@ else
   WORK_FOLDER=${WORK_FOLDER:-"${HOME}/Work/${APP_LC_NAME}"}
 fi
 
+BUILD_FOLDER="${WORK_FOLDER}/build"
+
 # ----- Create Work folder. -----
 
 echo
 echo "Using \"${WORK_FOLDER}\" as Work folder..."
 
 mkdir -p "${WORK_FOLDER}"
-
 
 # ----- Parse actions and command line options. -----
 
@@ -158,26 +159,23 @@ then
   build_script=$(pwd)/$0
 fi
 
-# Copy the current script to Work area, to later copy it into the install folder.
-mkdir -p "${WORK_FOLDER}/scripts"
-cp "${build_script}" "${WORK_FOLDER}/scripts/build-${APP_LC_NAME}.sh"
-
+# ----- Build helper. -----
 
 if [ -z "${helper_script}" ]
 then
-  bh="$(dirname ${build_script})/build-helper.sh"
-  if [ -f "${bh}" ]
+  script_folder_path="$(dirname ${build_script})"
+  script_folder_name="$(basename ${script_folder_path})"
+  if [ \( "${script_folder_name}" == "scripts" \) \
+    -a \( -f "${script_folder_path}/build-helper.sh" \) ]
   then
-    echo "Copying helper script..."
-    cp -v "${bh}" "${WORK_FOLDER}/scripts/build-helper.sh"
-  else
-    if [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
-    then
-      # Download helper script from SF git.
-      echo "Downloading helper script..."
-      curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
+    helper_script="${script_folder_path}/build-helper.sh"
+  elif [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
+  then
+    # Download helper script from GitHub git.
+    echo "Downloading helper script..."
+    curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
-    fi
+    helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
   fi
 else
   if [[ "${helper_script}" != /* ]]
@@ -185,18 +183,19 @@ else
     # Make relative path absolute.
     helper_script="$(pwd)/${helper_script}"
   fi
-
-  # Copy the current helper script to Work area, to later copy it into the install folder.
-  mkdir -p "${WORK_FOLDER}/scripts"
-  if [ "${helper_script}" != "${WORK_FOLDER}/scripts/build-helper.sh" ]
-  then
-    cp "${helper_script}" "${WORK_FOLDER}/scripts/build-helper.sh"
-  fi
 fi
 
-helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
+# Copy the current helper script to Work area, to later copy it into the install folder.
+mkdir -p "${WORK_FOLDER}/scripts"
+if [ "${helper_script}" != "${WORK_FOLDER}/scripts/build-helper.sh" ]
+then
+  cp "${helper_script}" "${WORK_FOLDER}/scripts/build-helper.sh"
+fi
 
-BUILD_FOLDER="${WORK_FOLDER}/build"
+echo "Helper script: \"${helper_script}\"."
+source "$helper_script"
+
+# ----- Library sources. -----
 
 # For updates, please check the corresponding pages.
 
@@ -220,6 +219,7 @@ LIBPNG_FOLDER="libpng-${LIBPNG_VERSION}"
 LIBPNG_ARCHIVE="${LIBPNG_FOLDER}.tar.gz"
 # LIBPNG_URL="https://sourceforge.net/projects/libpng/files/${LIBPNG_SFOLDER}/${LIBPNG_VERSION}/${LIBPNG_ARCHIVE}"
 LIBPNG_URL="https://sourceforge.net/projects/libpng/files/${LIBPNG_SFOLDER}/older-releases/${LIBPNG_VERSION}/${LIBPNG_ARCHIVE}"
+
 
 # http://www.ijg.org
 # http://www.ijg.org/files/
@@ -1913,8 +1913,8 @@ then
   # Post-process dynamic libraries paths to be relative to executable folder.
 
   echo
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
   ILIB=qemu-system-gnuarmeclipse
+  # otool -L "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
 
   do_mac_change_lib libgnutls.30.dylib
   do_mac_change_lib libusb-1.0.0.dylib

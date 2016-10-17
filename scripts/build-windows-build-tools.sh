@@ -60,10 +60,12 @@ else
   WORK_FOLDER=${WORK_FOLDER:-"${HOME}/Work/${APP_LC_NAME}"}
 fi
 
+BUILD_FOLDER="${WORK_FOLDER}/build"
+
 # ----- Create Work folder. -----
 
 echo
-echo "Using \"${WORK_FOLDER}\" as Work folder..."
+echo "Work folder: \"${WORK_FOLDER}\"."
 
 mkdir -p "${WORK_FOLDER}"
 
@@ -131,15 +133,23 @@ fi
 mkdir -p "${WORK_FOLDER}/scripts"
 cp "${build_script}" "${WORK_FOLDER}/scripts/build-${APP_LC_NAME}.sh"
 
+# ----- Build helper. -----
 
 if [ -z "${helper_script}" ]
 then
-  if [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
+  script_folder_path="$(dirname ${build_script})"
+  script_folder_name="$(basename ${script_folder_path})"
+  if [ \( "${script_folder_name}" == "scripts" \) \
+    -a \( -f "${script_folder_path}/build-helper.sh" \) ]
   then
-    # Download helper script from SF git.
+    helper_script="${script_folder_path}/build-helper.sh"
+  elif [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
+  then
+    # Download helper script from GitHub git.
     echo "Downloading helper script..."
     curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
+    helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
   fi
 else
   if [[ "${helper_script}" != /* ]]
@@ -147,18 +157,19 @@ else
     # Make relative path absolute.
     helper_script="$(pwd)/${helper_script}"
   fi
-
-  # Copy the current helper script to Work area, to later copy it into the install folder.
-  mkdir -p "${WORK_FOLDER}/scripts"
-  if [ "${helper_script}" != "${WORK_FOLDER}/scripts/build-helper.sh" ]
-  then
-    cp "${helper_script}" "${WORK_FOLDER}/scripts/build-helper.sh"
-  fi
 fi
 
-helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
+# Copy the current helper script to Work area, to later copy it into the install folder.
+mkdir -p "${WORK_FOLDER}/scripts"
+if [ "${helper_script}" != "${WORK_FOLDER}/scripts/build-helper.sh" ]
+then
+  cp "${helper_script}" "${WORK_FOLDER}/scripts/build-helper.sh"
+fi
 
-BUILD_FOLDER="${WORK_FOLDER}/build"
+echo "Helper script: \"${helper_script}\"."
+source "$helper_script"
+
+# ----- Library sources. -----
 
 # For updates, please check the corresponding pages.
 

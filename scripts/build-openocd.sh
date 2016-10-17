@@ -64,13 +64,14 @@ else
   WORK_FOLDER=${WORK_FOLDER:-"${HOME}/Work/${APP_LC_NAME}"}
 fi
 
+BUILD_FOLDER="${WORK_FOLDER}/build"
+
 # ----- Create Work folder. -----
 
 echo
-echo "Using \"${WORK_FOLDER}\" as Work folder..."
+echo "Work folder: \"${WORK_FOLDER}\"."
 
 mkdir -p "${WORK_FOLDER}"
-
 
 # ----- Parse actions and command line options. -----
 
@@ -161,15 +162,23 @@ fi
 mkdir -p "${WORK_FOLDER}/scripts"
 cp "${build_script}" "${WORK_FOLDER}/scripts/build-${APP_LC_NAME}.sh"
 
+# ----- Build helper. -----
 
 if [ -z "${helper_script}" ]
 then
-  if [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
+  script_folder_path="$(dirname ${build_script})"
+  script_folder_name="$(basename ${script_folder_path})"
+  if [ \( "${script_folder_name}" == "scripts" \) \
+    -a \( -f "${script_folder_path}/build-helper.sh" \) ]
   then
-    # Download helper script from SF git.
+    helper_script="${script_folder_path}/build-helper.sh"
+  elif [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
+  then
+    # Download helper script from GitHub git.
     echo "Downloading helper script..."
     curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
+    helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
   fi
 else
   if [[ "${helper_script}" != /* ]]
@@ -177,18 +186,19 @@ else
     # Make relative path absolute.
     helper_script="$(pwd)/${helper_script}"
   fi
-
-  # Copy the current helper script to Work area, to later copy it into the install folder.
-  mkdir -p "${WORK_FOLDER}/scripts"
-  if [ "${helper_script}" != "${WORK_FOLDER}/scripts/build-helper.sh" ]
-  then
-    cp "${helper_script}" "${WORK_FOLDER}/scripts/build-helper.sh"
-  fi
 fi
 
-helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
+# Copy the current helper script to Work area, to later copy it into the install folder.
+mkdir -p "${WORK_FOLDER}/scripts"
+if [ "${helper_script}" != "${WORK_FOLDER}/scripts/build-helper.sh" ]
+then
+  cp "${helper_script}" "${WORK_FOLDER}/scripts/build-helper.sh"
+fi
 
-BUILD_FOLDER="${WORK_FOLDER}/build"
+echo "Helper script: \"${helper_script}\"."
+source "$helper_script"
+
+# ----- Library sources. -----
 
 # For updates, please check the corresponding pages.
 
@@ -199,12 +209,14 @@ LIBUSB1_FOLDER="libusb-${LIBUSB1_VERSION}"
 LIBUSB1="${LIBUSB1_FOLDER}"
 LIBUSB1_ARCHIVE="${LIBUSB1}.tar.bz2"
 
+
 # https://sourceforge.net/projects/libusb/files/libusb-compat-0.1/
 # 0.1.5 from 2013-05-21
 LIBUSB0_VERSION="0.1.5"
 LIBUSB0_FOLDER="libusb-compat-${LIBUSB0_VERSION}"
 LIBUSB0="${LIBUSB0_FOLDER}"
 LIBUSB0_ARCHIVE="${LIBUSB0_FOLDER}.tar.bz2"
+
 
 # https://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/
 # 1.2.6.0 from 2012-01-17
@@ -214,12 +226,14 @@ LIBUSB_W32="${LIBUSB_W32_PREFIX}-${LIBUSB_W32_VERSION}"
 LIBUSB_W32_FOLDER="${LIBUSB_W32_PREFIX}-src-${LIBUSB_W32_VERSION}"
 LIBUSB_W32_ARCHIVE="${LIBUSB_W32_FOLDER}.zip"
 
+
 # http://www.intra2net.com/en/developer/libftdi/download.php
 # 1.2 (no date)
 LIBFTDI_VERSION="1.2"
 LIBFTDI_FOLDER="libftdi1-${LIBFTDI_VERSION}"
 LIBFTDI_ARCHIVE="${LIBFTDI_FOLDER}.tar.bz2"
 LIBFTDI="${LIBFTDI_FOLDER}"
+
 
 # https://github.com/signal11/hidapi/downloads
 # Oct 26, 2011
