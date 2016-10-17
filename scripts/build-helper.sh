@@ -598,6 +598,10 @@ run_local_script() {
         local_script="$2"
         shift 2
         ;;
+      --host-uname)
+        host_uname="$2"
+        shift 2
+        ;;
       --)
         shift
         break;
@@ -609,8 +613,12 @@ run_local_script() {
   echo "Running \"$(basename "${local_script}")\" script locally..."
 
   # Run the second pass script in a local sub-shell.
-  /bin/bash "${local_script}" \
-    $@
+  if [ "${host_uname}" == "Darwin" ]
+  then
+    caffeinate /bin/bash "${local_script}" $@
+  else
+    /bin/bash "${local_script}" $@
+  fi
 }
 # ^===========================================================================^
 
