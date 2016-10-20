@@ -807,10 +807,18 @@ EOF
 if [ "$HOST_DISTRO_NAME" == "Darwin" ]
 then
 
+set +u
+if [ ! -z ${MACPORTS_FOLDER} ]
+then
+  echo MACPORTS_FOLDER="${MACPORTS_FOLDER}" >> "${script_file}"
+fi
+set -u
+
 # Note: EOF is not quoted to allow local substitutions.
 cat <<EOF >> "${script_file}"
 
-MACPORTS_FOLDER="${MACPORTS_FOLDER}"
+X11_FOLDER="${X11_FOLDER}"
+GETTEXT_FOLDER="${GETTEXT_FOLDER}"
 
 EOF
 
@@ -938,6 +946,9 @@ cd ${build_folder}
 echo
 echo "Checking automake..."
 automake --version 2>/dev/null | grep automake
+
+echo "Checking pkg-config..."
+pkg-config --version
 
 if [ "${target_name}" != "osx" ]
 then
@@ -1203,7 +1214,7 @@ then
     \
     bash "${work_folder}/${LIBSDL_FOLDER}/configure" \
       --prefix="${install_folder}" \
-      --x-includes="${MACPORTS_FOLDER}/include"
+      --x-includes="${X11_FOLDER}/include"
 
   fi
 
@@ -1583,8 +1594,8 @@ then
   elif [ "${target_name}" == "osx" ]
   then
     # To find libintl, add explicit paths.
-    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
-    LDFLAGS="-L${install_folder}/lib" \
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include -I${GETTEXT_FOLDER}/include" \
+    LDFLAGS="-L${install_folder}/lib -L${GETTEXT_FOLDER}/lib" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
@@ -1725,8 +1736,8 @@ then
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
     bash "${git_folder}/configure" \
-      --extra-cflags="-g -pipe -I${install_folder}/include -I${MACPORTS_FOLDER}/include -Wno-missing-format-attribute" \
-      --extra-ldflags="-v -L${install_folder}/lib -L${MACPORTS_FOLDER}/lib -lX11" \
+      --extra-cflags="-g -pipe -I${install_folder}/include -I${X11_FOLDER}/include -Wno-missing-format-attribute" \
+      --extra-ldflags="-v -L${install_folder}/lib -L${X11_FOLDER}/lib -lX11" \
       --target-list="gnuarmeclipse-softmmu" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
@@ -1922,18 +1933,18 @@ then
   ILIB=qemu-system-gnuarmeclipse
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
 
-  do_mac_change_lib libgnutls.30.dylib
-  do_mac_change_lib libusb-1.0.0.dylib
+  #do_mac_change_lib libgnutls.30.dylib
+  #do_mac_change_lib libusb-1.0.0.dylib
   do_mac_change_built_lib libz.1.dylib
-  do_mac_change_lib libpixman-1.0.dylib
+  #do_mac_change_lib libpixman-1.0.dylib
   do_mac_change_built_lib libSDL-1.2.0.dylib
   do_mac_change_built_lib libSDL_image-1.2.0.dylib
-  do_mac_change_lib libX11.6.dylib
+  do_mac_change_lib libX11.6.dylib "${X11_FOLDER}/lib"
   do_mac_change_built_lib libgthread-2.0.0.dylib
   do_mac_change_built_lib libglib-2.0.0.dylib
   do_mac_change_built_lib libintl.8.dylib
   do_mac_change_built_lib libpixman-1.0.dylib
-  do_mac_change_lib liblzo2.2.dylib
+  # do_mac_change_lib liblzo2.2.dylib
   do_mac_check_lib
 
   do_mac_copy_built_lib libSDL-1.2.0.dylib
@@ -1975,6 +1986,31 @@ then
   do_mac_change_built_lib libintl.8.dylib
   do_mac_check_lib
 
+  do_mac_copy_built_lib libz.1.dylib
+  do_mac_check_lib
+
+  do_mac_copy_built_lib libpixman-1.0.dylib  
+  do_mac_check_lib
+
+  do_mac_copy_lib libX11.6.dylib "${X11_FOLDER}/lib"
+  do_mac_change_lib libxcb.1.dylib "${X11_FOLDER}/lib"
+  do_mac_change_lib libXau.6.dylib "${X11_FOLDER}/lib"
+  do_mac_change_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
+  do_mac_check_lib
+
+  do_mac_copy_lib libxcb.1.dylib "${X11_FOLDER}/lib"
+  do_mac_change_lib libXau.6.dylib "${X11_FOLDER}/lib"
+  do_mac_change_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
+  do_mac_check_lib
+
+  do_mac_copy_lib libXau.6.dylib "${X11_FOLDER}/lib"
+  do_mac_check_lib
+
+  do_mac_copy_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
+  do_mac_check_lib
+
+if false
+then
   echo
   # Different input name
   ILIB=libz.1.dylib
@@ -2015,13 +2051,7 @@ then
   do_mac_copy_lib libgmp.10.dylib
   do_mac_check_lib
 
-  do_mac_copy_lib libpixman-1.0.dylib  
-  do_mac_check_lib
-
-  do_mac_copy_lib libX11.6.dylib
-  do_mac_change_lib libxcb.1.dylib
-  do_mac_check_lib
-
+ 
   do_mac_copy_lib libXext.6.dylib
   do_mac_change_lib libX11.6.dylib
   do_mac_check_lib
@@ -2048,18 +2078,7 @@ fi
   do_mac_change_lib libX11.6.dylib
   do_mac_check_lib
 
-
-  do_mac_copy_lib libxcb.1.dylib
-  do_mac_change_lib libXau.6.dylib
-  do_mac_change_lib libXdmcp.6.dylib
-  do_mac_check_lib
-
-  do_mac_copy_lib libXau.6.dylib
-  do_mac_check_lib
-
-  do_mac_copy_lib libXdmcp.6.dylib
-  do_mac_check_lib
-
+fi
   # Do not strip resulting dylib files!
 
 fi

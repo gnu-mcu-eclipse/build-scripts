@@ -791,6 +791,9 @@ automake --version 2>/dev/null | grep automake
 echo "Checking cmake..."
 cmake --version | grep cmake
 
+echo "Checking pkg-config..."
+pkg-config --version
+
 if [ "${target_name}" != "osx" ]
 then
   echo "Checking readelf..."

@@ -6,11 +6,21 @@ The project is available from [GitHub](https://github.com/gnuarmeclipse/build-sc
 
 All scripts use a common helper (`build-helper.sh`) to perform common tasks.
 
-To use the scripts, get them to `Downloads` and start them with `bash`.
+To use the scripts, clone the project to `Downloads` and start the desired script with `bash`.
 
-Each script will further download the helper script, the project repository, libraries, and all components required to perform the build.
+```
+$ git clone https://github.com/gnuarmeclipse/build-scripts.git ~/Downloads/build-scripts.git
+$ bash ~/Downloads/build-scripts.git/scripts/build-windows-build-tools.sh --all
+```
+
+Each script will further download the project repository, libraries, and all components required to perform the build.
 
 The scripts generate:
 - a Windows setup 
 - an macOS install package
 - a GNU/Linux compressed archive
+
+For more details regarding each project build, see:
+- [Wndows Build Tools](http://gnuarmeclipse.github.io/windows-build-tools/build-procedure/)
+- [OpenOCD](http://gnuarmeclipse.github.io/openocd/build-procedure/)
+- [QEMU](http://gnuarmeclipse.github.io/qemu/build-procedure/)

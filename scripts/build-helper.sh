@@ -96,26 +96,65 @@ do
       then
         # Prepare MacPorts environment.
 
-        if [ -d /opt/macports ]
+        # Experimental support for custom Homebrew; 
+        # not great, it requires MacTex and XQuartz.
+        if [ -d "$HOME/opt/homebrew-gae" ]
         then
-          export PATH=/opt/macports/bin:/opt/macports/sbin:$PATH
-          MACPORTS_FOLDER=/opt/macports
-        elif [ -d /opt/local ]
-        then
-          export PATH=/opt/local/bin:/opt/local/sbin:$PATH
-          MACPORTS_FOLDER=/opt/local
+          # A small kludge to access the keg-only tools.
+          # Requires updates if the version changes.
+          PATH="$HOME/opt/homebrew-gae/Cellar/texinfo/6.3/bin":$PATH
+          PATH="$HOME/opt/homebrew-gae/Cellar/gettext/0.19.8.1/bin":$PATH
+          PATH="$HOME/opt/homebrew-gae/bin":$PATH
+          PATH="/Library/TeX/texbin":$PATH
+          export PATH
+
+          X11_FOLDER="/opt/X11"
+          GETTEXT_FOLDER="$HOME/opt/homebrew-gae/opt/gettext"
+
+          echo "Checking Homebrew..."
+          set +e
+          brew --version
+          if [ $? != 0 ]
+          then
+            echo "Please install Homebrew and rerun."
+            exit 1
+          fi
+          set -e
+
+        else
+
+          if [ -d "$HOME/opt/macports-gae" ]
+          then
+            # Experimental support for custom MacPorts;
+            # not great, it not only requires lots of packages, but
+            # also requires Python installed in system.
+            export PATH="$HOME/opt/macports-gae/bin":"$HOME/opt/macports-gae/sbin":$PATH
+            MACPORTS_FOLDER="$HOME/opt/macports-gae"
+          elif [ -d "/opt/macports" ]
+          then
+            export PATH=/opt/macports/bin:/opt/macports/sbin:$PATH
+            MACPORTS_FOLDER=/opt/macports
+          elif [ -d /opt/local ]
+          then
+            export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+            MACPORTS_FOLDER=/opt/local
+          fi
+
+          echo
+          echo "Adding ${MACPORTS_FOLDER} to PATH..."
+          echo "Checking MacPorts..."
+          set +e
+          port version
+          if [ $? != 0 ]
+          then
+            echo "Please install MacPorts and rerun."
+            exit 1
+          fi
+          set -e
+
+          X11_FOLDER="${MACPORTS_FOLDER}"
+          GETTEXT_FOLDER="${MACPORTS_FOLDER}"
         fi
-        echo
-        echo "Adding ${MACPORTS_FOLDER} to PATH..."
-        echo "Checking MacPorts..."
-        set +e
-        port version
-        if [ $? != 0 ]
-        then
-          echo "Please install MacPorts and rerun."
-          exit 1
-        fi
-        set -e
       fi
 
       echo
@@ -872,18 +911,21 @@ do_mac_change_built_lib() {
 
 # v===========================================================================v
 # $1 = dylib name (like libXau.6.dylib)
+# $2 = folder (like /opt/X11/lib)
 do_mac_change_lib() {
-  install_name_tool -change "${MACPORTS_FOLDER}/lib/$1" \
+  install_name_tool -change "$2/$1" \
     "@executable_path/$1" \
     "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 }
 
 # v===========================================================================v
+# $1 = dylib name (like libXau.6.dylib)
+# $2 = folder (like /opt/X11/lib)
 do_mac_copy_lib() {
 
   echo
   ILIB=$1
-  cp -v "${MACPORTS_FOLDER}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  cp -v "${2}/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
   install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
 }
@@ -892,8 +934,9 @@ do_mac_copy_lib() {
 do_mac_check_lib() {
 
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  local unxp=$(otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}" | grep macports)
-  if [ ! -z $unxp ]
+  local unxp=$(otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}" | grep -e "macports" -e "homebrew" -e "opt")
+  # echo "|${unxp}|"
+  if [ ! -z "$unxp" ]
   then
     exit 1
   fi
