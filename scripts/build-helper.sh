@@ -94,8 +94,6 @@ do
 
       if [ "${HOST_UNAME}" == "Darwin" ]
       then
-        # Prepare MacPorts environment.
-
         # Experimental support for custom Homebrew; 
         # not great, it requires MacTex and XQuartz.
         if [ -d "$HOME/opt/homebrew-gae" ]
@@ -111,7 +109,7 @@ do
           X11_FOLDER="/opt/X11"
           GETTEXT_FOLDER="$HOME/opt/homebrew-gae/opt/gettext"
 
-          echo "Checking Homebrew..."
+          echo "Checking Homebrew in '$HOME/opt/homebrew-gae'..."
           set +e
           brew --version
           if [ $? != 0 ]
