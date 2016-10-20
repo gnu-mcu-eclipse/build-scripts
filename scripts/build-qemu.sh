@@ -1933,10 +1933,7 @@ then
   ILIB=qemu-system-gnuarmeclipse
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
 
-  #do_mac_change_lib libgnutls.30.dylib
-  #do_mac_change_lib libusb-1.0.0.dylib
   do_mac_change_built_lib libz.1.dylib
-  #do_mac_change_lib libpixman-1.0.dylib
   do_mac_change_built_lib libSDL-1.2.0.dylib
   do_mac_change_built_lib libSDL_image-1.2.0.dylib
   do_mac_change_lib libX11.6.dylib "${X11_FOLDER}/lib"
@@ -1944,7 +1941,6 @@ then
   do_mac_change_built_lib libglib-2.0.0.dylib
   do_mac_change_built_lib libintl.8.dylib
   do_mac_change_built_lib libpixman-1.0.dylib
-  # do_mac_change_lib liblzo2.2.dylib
   do_mac_check_lib
 
   do_mac_copy_built_lib libSDL-1.2.0.dylib
@@ -2009,76 +2005,6 @@ then
   do_mac_copy_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
   do_mac_check_lib
 
-if false
-then
-  echo
-  # Different input name
-  ILIB=libz.1.dylib
-  cp -v "${MACPORTS_FOLDER}/lib/libz.1.2.8.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id ${ILIB} "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  do_mac_check_lib
-
-  do_mac_copy_lib libgnutls.30.dylib
-  do_mac_change_lib libz.1.dylib
-  do_mac_change_lib libiconv.2.dylib
-  do_mac_change_lib libp11-kit.0.dylib
-  do_mac_change_lib libtasn1.6.dylib
-  do_mac_change_lib libnettle.6.dylib
-  do_mac_change_lib libhogweed.4.dylib
-  do_mac_change_lib libgmp.10.dylib
-  do_mac_change_lib libintl.8.dylib
-  do_mac_change_lib libidn.11.dylib
-  do_mac_check_lib
-
-  do_mac_copy_lib libp11-kit.0.dylib
-  do_mac_change_lib libffi.6.dylib
-  do_mac_change_lib libintl.8.dylib
-  do_mac_check_lib
-
-  do_mac_copy_lib libtasn1.6.dylib
-  do_mac_check_lib
-
-  do_mac_copy_lib libnettle.6.dylib
-  do_mac_check_lib
-
-  do_mac_copy_lib libhogweed.4.dylib
-  do_mac_change_lib libnettle.6.dylib
-  do_mac_change_lib libgmp.10.dylib  
-  do_mac_check_lib
-
-  do_mac_copy_lib libgmp.10.dylib
-  do_mac_check_lib
-
- 
-  do_mac_copy_lib libXext.6.dylib
-  do_mac_change_lib libX11.6.dylib
-  do_mac_check_lib
-
-  do_mac_copy_lib liblzo2.2.dylib  
-  do_mac_check_lib
-
-  do_mac_copy_lib libidn.11.dylib
-  do_mac_change_lib libintl.8.dylib
-  do_mac_change_lib libiconv.2.dylib
-  do_mac_check_lib
-
-# No longer neded on 10.11 with latest MacPorts
-if false
-then
-  do_mac_copy_lib libXrandr.2.dylib
-  do_mac_change_lib libXext.6.dylib
-  do_mac_change_lib libXrender.1.dylib
-  do_mac_change_lib libX11.6.dylib
-  do_mac_check_lib
-fi
-
-  do_mac_copy_lib libXrender.1.dylib
-  do_mac_change_lib libX11.6.dylib
-  do_mac_check_lib
-
-fi
   # Do not strip resulting dylib files!
 
 fi
