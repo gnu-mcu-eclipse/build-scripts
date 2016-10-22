@@ -92,8 +92,11 @@ do
 
     --prepare-prerequisites) # -----
 
+      caffeinate=""
       if [ "${HOST_UNAME}" == "Darwin" ]
       then
+        caffeinate="caffeinate"
+
         # Experimental support for custom Homebrew; 
         # not great, it requires MacTex and XQuartz.
         if [ -d "$HOME/opt/homebrew-gae" ]
@@ -596,30 +599,16 @@ run_docker_script() {
   echo "Running \"$(basename "${docker_script}")\" script inside \"${docker_container_name}\" container, image \"${docker_image}\"..."
 
   # Run the second pass script in a fresh Docker container.
-  if [ "${host_uname}" == "Darwin" ]
-  then
-    caffeinate docker run \
-      --name="${docker_container_name}" \
-      --tty \
-      --hostname "docker" \
-      --workdir="/root" \
-      --volume="${WORK_FOLDER}/..:/Host/Work" \
-      ${docker_image} \
-      /bin/bash "${docker_script}" \
-        --docker-container-name "${docker_container_name}" \
-        $@
-  else
-    docker run \
-      --name="${docker_container_name}" \
-      --tty \
-      --hostname "docker" \
-      --workdir="/root" \
-      --volume="${WORK_FOLDER}/..:/Host/Work" \
-      ${docker_image} \
-      /bin/bash "${docker_script}" \
-        --docker-container-name "${docker_container_name}" \
-        $@
-  fi
+  ${caffeinate} docker run \
+    --name="${docker_container_name}" \
+    --tty \
+    --hostname "docker" \
+    --workdir="/root" \
+    --volume="${WORK_FOLDER}/..:/Host/Work" \
+    ${docker_image} \
+    /bin/bash "${docker_script}" \
+      --docker-container-name "${docker_container_name}" \
+      $@
 
   # Remove the container.
   docker rm --force "${docker_container_name}"
@@ -650,12 +639,7 @@ run_local_script() {
   echo "Running \"$(basename "${local_script}")\" script locally..."
 
   # Run the second pass script in a local sub-shell.
-  if [ "${host_uname}" == "Darwin" ]
-  then
-    caffeinate /bin/bash "${local_script}" $@
-  else
-    /bin/bash "${local_script}" $@
-  fi
+  ${caffeinate} /bin/bash "${local_script}" $@
 }
 # ^===========================================================================^
 
