@@ -1797,7 +1797,7 @@ then
 
   if [ -z "${do_no_strip}" ]
   then
-    do_strip ${cross_compile_prefix}-strip \
+    ${cross_compile_prefix}-strip \
       "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse.exe"
   fi
 
@@ -1839,7 +1839,7 @@ then
 
   if [ -z "${do_no_strip}" ]
   then
-    do_strip ${cross_compile_prefix}-strip "${install_folder}/${APP_LC_NAME}/bin/"*.dll
+    ${cross_compile_prefix}-strip "${install_folder}/${APP_LC_NAME}/bin/"*.dll
   fi
 
   # Remove some unexpected files.
@@ -1852,7 +1852,7 @@ then
 
   if [ -z "${do_no_strip}" ]
   then
-    do_strip strip "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
+    strip "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
   fi
 
   # This is a very important detail: 'patchelf' sets "runpath"
@@ -1920,7 +1920,7 @@ then
 
   if [ -z "${do_no_strip}" ]
   then
-    do_strip strip "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
+    strip "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
   fi
 
   echo
@@ -2094,7 +2094,7 @@ then
   do_build_target "Creating Windows 64-bits setup..." \
     --target-name win \
     --target-bits 64 \
-    --docker-image ilegeul/debian:8-gnuarm-mingw
+    --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
 fi
 
 # ----- Build the Windows 32-bits distribution. -----
@@ -2104,7 +2104,7 @@ then
   do_build_target "Creating Windows 32-bits setup..." \
     --target-name win \
     --target-bits 32 \
-    --docker-image ilegeul/debian:8-gnuarm-mingw
+    --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
 fi
 
 # ----- Build the Debian 64-bits distribution. -----
@@ -2114,7 +2114,7 @@ then
   do_build_target "Creating Debian 64-bits archive..." \
     --target-name debian \
     --target-bits 64 \
-    --docker-image ilegeul/debian:8-gnuarm-gcc-x11-v3
+    --docker-image "ilegeul/debian:8-gnuarm-gcc-x11-v4"
 fi
 
 # ----- Build the Debian 32-bits distribution. -----
@@ -2124,7 +2124,7 @@ then
   do_build_target "Creating Debian 32-bits archive..." \
     --target-name debian \
     --target-bits 32 \
-    --docker-image ilegeul/debian32:8-gnuarm-gcc-x11-v3
+    --docker-image "ilegeul/debian32:8-gnuarm-gcc-x11-v4"
 fi
 
 # ---- Prevent script break because of not found MD5 file without arguments ----

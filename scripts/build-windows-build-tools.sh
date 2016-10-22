@@ -837,7 +837,7 @@ then
   do_build_target "Creating Windows 64-bits setup..." \
     --target-name win \
     --target-bits 64 \
-    --docker-image ilegeul/debian:8-gnuarm-mingw
+    --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
 fi
 
 # ----- Build the Windows 32-bits distribution. -----
@@ -847,7 +847,7 @@ then
   do_build_target "Creating Windows 32-bits setup..." \
     --target-name win \
     --target-bits 32 \
-    --docker-image ilegeul/debian:8-gnuarm-mingw
+    --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
 fi
 
 cat "${WORK_FOLDER}/output/"*.md5
