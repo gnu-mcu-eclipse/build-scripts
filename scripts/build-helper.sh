@@ -4,32 +4,31 @@
 
 # Multi-platform helper for OpenOCD & QEMU builds, using Docker.
 
-while [ $# -gt 0 ]
-do
-  case "$1" in
+# v===========================================================================v
+do_host_start_timer() {
 
-    --start-timer) # -----
+  BEGIN_SEC=$(date +%s)
+  echo "Script \"$0\" started at $(date)."
+}
 
-      BEGIN_SEC=$(date +%s)
-      echo "Script \"$0\" started at $(date)."
-      ;;
+# v===========================================================================v
+do_host_stop_timer() {
 
-    --stop-timer) # -----
+  END_SEC=$(date +%s)
+  echo
+  echo "Script \"$0\" completed at $(date)."
+  DELTA_SEC=$((END_SEC-BEGIN_SEC))
+  if [ ${DELTA_SEC} -lt 100 ]
+  then
+    echo "Duration: ${DELTA_SEC} seconds."
+  else
+    DELTA_MIN=$(((DELTA_SEC+30)/60))
+    echo "Duration: ${DELTA_MIN} minutes."
+  fi
+}
 
-      END_SEC=$(date +%s)
-      echo
-      echo "Script \"$0\" completed at $(date)."
-      DELTA_SEC=$((END_SEC-BEGIN_SEC))
-      if [ ${DELTA_SEC} -lt 100 ]
-      then
-        echo "Duration: ${DELTA_SEC} seconds."
-      else
-        DELTA_MIN=$(((DELTA_SEC+30)/60))
-        echo "Duration: ${DELTA_MIN} minutes."
-      fi
-      ;;
-
-    --detect-host) # -----
+# v===========================================================================v
+do_host_detect() {
 
       HOST_DISTRO_NAME=""
       HOST_UNAME="$(uname)"
@@ -88,9 +87,10 @@ do
 
       GROUP_ID=$(id -g)
       USER_ID=$(id -u)
-      ;;
+}
 
-    --prepare-prerequisites) # -----
+# v===========================================================================v
+do_host_prepare_prerequisites() {
 
       caffeinate=""
       if [ "${HOST_UNAME}" == "Darwin" ]
@@ -164,9 +164,10 @@ do
 
       echo "Checking host git..."
       git --version
-      ;;
+}
 
-    --prepare-docker) # -----
+# v===========================================================================v
+do_host_prepare_docker() {
 
       echo
       echo "Checking Docker..."
@@ -184,9 +185,10 @@ do
         echo "Preparing Docker environment..."
         eval "$(docker-machine env default)"
       fi
-      ;;
+}
 
-    --get-git-head) # -----
+# v===========================================================================v
+do_host_get_git_head() {
 
       # Get the current Git branch name, to know if we are building the stable or
       # the development release.
@@ -198,16 +200,200 @@ do
         GIT_HEAD=""
       fi
       set -e
-      ;;
+}
 
-    --get-current-date) # -----
+# v===========================================================================v
+do_host_get_current_date() {
 
       # Use the UTC date as version in the name of the distribution file.
       DISTRIBUTION_FILE_DATE=${DISTRIBUTION_FILE_DATE:-$(date -u +%Y%m%d%H%M)}
-      ;;
+}
 
-    # ----- Run inside Docker container ---------------------------------------
-    --copy-info)
+# v===========================================================================v
+do_host_build_target() {
+
+  message="$1"
+  shift
+
+  echo
+  echo "================================================================================"
+  echo "${message}"
+
+  target_bits=""
+  docker_image=""
+
+  while [ $# -gt 0 ]
+  do
+    case "$1" in
+      --target-name)
+        target_name="$2"
+        shift 2
+        ;;
+      --target-bits)
+        target_bits="$2"
+        shift 2
+        ;;
+      --docker-image)
+        docker_image="$2"
+        shift 2
+        ;;
+      *)
+        echo "Unknown option $1, exit."
+        exit 1
+    esac
+  done
+
+  # Must be located before adjusting target_bits for osx.
+  target_folder=${target_name}${target_bits}
+
+  cross_compile_prefix=""
+  if [ "${target_name}" == "win" ]
+  then
+    # For Windows targets, decide which cross toolchain to use.
+    if [ ${target_bits} == "32" ]
+    then
+      cross_compile_prefix="i686-w64-mingw32"
+    elif [ ${target_bits} == "64" ]
+    then
+      cross_compile_prefix="x86_64-w64-mingw32"
+    fi
+  elif [ "${target_name}" == "osx" ]
+  then
+    target_bits="64"
+  fi
+
+  if [ -n "${docker_image}" ]
+  then
+
+    run_docker_script \
+      --script "${DOCKER_HOST_WORK}/scripts/${script_name}" \
+      --docker-image "${docker_image}" \
+      --docker-container-name "${APP_LC_NAME}-${target_folder}-build" \
+      --host-uname "${HOST_UNAME}" \
+      -- \
+      --build-folder "${DOCKER_HOST_WORK}/build/${target_folder}" \
+      --target-name "${target_name}" \
+      --target-bits "${target_bits}" \
+      --output-folder "${DOCKER_HOST_WORK}/output/${target_folder}" \
+      --distribution-folder "${DOCKER_HOST_WORK}/output" \
+      --install-folder "${DOCKER_HOST_WORK}/install/${target_folder}" \
+      --download-folder "${DOCKER_HOST_WORK}/download" \
+      --helper-script "${DOCKER_HOST_WORK}/scripts/build-helper.sh" \
+      --work-folder "${DOCKER_HOST_WORK}" \
+      --group-id "${GROUP_ID}" \
+      --user-id "${USER_ID}" \
+      --host-uname "${HOST_UNAME}"
+
+  else
+
+    run_local_script \
+      --script "${script_file}" \
+      --host-uname "${HOST_UNAME}" \
+      -- \
+      --build-folder "${WORK_FOLDER}/build/${target_folder}" \
+      --target-name "${target_name}" \
+      --output-folder "${WORK_FOLDER}/output/${target_folder}" \
+      --distribution-folder "${WORK_FOLDER}/output" \
+      --install-folder "${WORK_FOLDER}/install/${target_folder}" \
+      --download-folder "${WORK_FOLDER}/download" \
+      --helper-script "${WORK_FOLDER}/scripts/build-helper.sh" \
+      --work-folder "${WORK_FOLDER}" \
+      --host-uname "${HOST_UNAME}"
+
+  fi
+}
+
+# v===========================================================================v
+run_docker_script() {
+
+  while [ $# -gt 0 ]
+  do
+    case "$1" in
+      --script)
+        docker_script="$2"
+        shift 2
+        ;;
+      --docker-image)
+        docker_image="$2"
+        shift 2
+        ;;
+      --docker-container-name)
+        docker_container_name="$2"
+        shift 2
+        ;;
+      --host-uname)
+        host_uname="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        break;
+        ;;
+    esac
+  done
+
+  set +e
+  # Remove a possible previously crashed container.
+  docker rm --force "${docker_container_name}" > /dev/null 2> /dev/null
+  set -e
+
+  echo
+  echo "Running \"$(basename "${docker_script}")\" script inside \"${docker_container_name}\" container, image \"${docker_image}\"..."
+
+  # Run the second pass script in a fresh Docker container.
+  ${caffeinate} docker run \
+    --name="${docker_container_name}" \
+    --tty \
+    --hostname "docker" \
+    --workdir="/root" \
+    --volume="${WORK_FOLDER}/..:/Host/Work" \
+    ${docker_image} \
+    /bin/bash ${DEBUG} "${docker_script}" \
+      --docker-container-name "${docker_container_name}" \
+      $@
+
+  # Remove the container.
+  docker rm --force "${docker_container_name}"
+}
+
+# v===========================================================================v
+run_local_script() {
+
+  while [ $# -gt 0 ]
+  do
+    case "$1" in
+      --script)
+        local_script="$2"
+        shift 2
+        ;;
+      --host-uname)
+        host_uname="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        break;
+        ;;
+    esac
+  done
+
+  echo
+  echo "Running \"$(basename "${local_script}")\" script locally..."
+
+  # Run the second pass script in a local sub-shell.
+  ${caffeinate} /bin/bash ${DEBUG} "${local_script}" $@
+}
+# ^===========================================================================^
+
+
+
+
+
+
+# ----- Functions used in the Docker container build script. -----
+
+# v===========================================================================v
+do_container_copy_info() {
 
       if [ "${target_name}" == "debian" ]
       then
@@ -246,9 +432,10 @@ do
       /usr/bin/install -cv -m 644 "${output_folder}/config.log" \
         "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/config.log"
       do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/config.log"
-      ;;
+}
 
-    --create-distribution)
+# v===========================================================================v
+do_container_create_distribution() {
 
       if [ "${target_name}" == "win" ]
       then
@@ -388,9 +575,10 @@ do
         chown -R ${user_id}:${group_id} ${work_folder}/install
         chown -R ${user_id}:${group_id} ${work_folder}/output
       fi
-      ;;
+}
 
-    --completed)
+# v===========================================================================v
+do_container_completed() {
 
       echo
       if [ "${result}" == "0" ]
@@ -404,22 +592,10 @@ do
 
       echo
       echo "Script \"$(basename $0)\" completed."
-      ;;
-
-    *) # ----------------------------------------------------------------------
-      echo "Unknown option $1, exit."
-      exit 1
-      ;;
-  esac
-
-  shift
-done
-
-
-# ----- Functions used in the host build script. -----
+}
 
 # v===========================================================================v
-do_download() {
+do_download_() {
 
   while [ $# -gt 0 ]
   do
@@ -456,198 +632,7 @@ do_download() {
 }
 
 # v===========================================================================v
-do_build_target() {
-
-  message="$1"
-  shift
-
-  echo
-  echo "================================================================================"
-  echo "${message}"
-
-  target_bits=""
-  docker_image=""
-
-  while [ $# -gt 0 ]
-  do
-    case "$1" in
-      --target-name)
-        target_name="$2"
-        shift 2
-        ;;
-      --target-bits)
-        target_bits="$2"
-        shift 2
-        ;;
-      --docker-image)
-        docker_image="$2"
-        shift 2
-        ;;
-      *)
-        echo "Unknown option $1, exit."
-        exit 1
-    esac
-  done
-
-  # Must be located before adjusting target_bits for osx.
-  target_folder=${target_name}${target_bits}
-
-  cross_compile_prefix=""
-  if [ "${target_name}" == "win" ]
-  then
-    # For Windows targets, decide which cross toolchain to use.
-    if [ ${target_bits} == "32" ]
-    then
-      cross_compile_prefix="i686-w64-mingw32"
-    elif [ ${target_bits} == "64" ]
-    then
-      cross_compile_prefix="x86_64-w64-mingw32"
-    fi
-  elif [ "${target_name}" == "osx" ]
-  then
-    target_bits="64"
-  fi
-
-  if [ -n "${docker_image}" ]
-  then
-
-    run_docker_script \
-      --script "${DOCKER_HOST_WORK}/scripts/${script_name}" \
-      --docker-image "${docker_image}" \
-      --docker-container-name "${APP_LC_NAME}-${target_folder}-build" \
-      --host-uname "${HOST_UNAME}" \
-      -- \
-      --build-folder "${DOCKER_HOST_WORK}/build/${target_folder}" \
-      --target-name "${target_name}" \
-      --target-bits "${target_bits}" \
-      --output-folder "${DOCKER_HOST_WORK}/output/${target_folder}" \
-      --distribution-folder "${DOCKER_HOST_WORK}/output" \
-      --install-folder "${DOCKER_HOST_WORK}/install/${target_folder}" \
-      --download-folder "${DOCKER_HOST_WORK}/download" \
-      --helper-script "${DOCKER_HOST_WORK}/scripts/build-helper.sh" \
-      --work-folder "${DOCKER_HOST_WORK}" \
-      --group-id "${GROUP_ID}" \
-      --user-id "${USER_ID}" \
-      --host-uname "${HOST_UNAME}"
-
-  else
-
-    run_local_script \
-      --script "${script_file}" \
-      --host-uname "${HOST_UNAME}" \
-      -- \
-      --build-folder "${WORK_FOLDER}/build/${target_folder}" \
-      --target-name "${target_name}" \
-      --output-folder "${WORK_FOLDER}/output/${target_folder}" \
-      --distribution-folder "${WORK_FOLDER}/output" \
-      --install-folder "${WORK_FOLDER}/install/${target_folder}" \
-      --download-folder "${WORK_FOLDER}/download" \
-      --helper-script "${WORK_FOLDER}/scripts/build-helper.sh" \
-      --work-folder "${WORK_FOLDER}" \
-      --host-uname "${HOST_UNAME}"
-
-  fi
-}
-
-# v===========================================================================v
-do_compute_md5() {
-  # $1 md5 program
-  # $2 options
-  # $3 file
-
-  md5_file=$(echo "$3" | sed -e 's/\.[etp][xgk][ezg]$/.md5/')
-  cd $(dirname $3)
-  "$1" "$2" "$(basename $3)" >"${md5_file}"
-  echo "MD5: $(cat ${md5_file})"
-}
-
-# v===========================================================================v
-run_docker_script() {
-
-  while [ $# -gt 0 ]
-  do
-    case "$1" in
-      --script)
-        docker_script="$2"
-        shift 2
-        ;;
-      --docker-image)
-        docker_image="$2"
-        shift 2
-        ;;
-      --docker-container-name)
-        docker_container_name="$2"
-        shift 2
-        ;;
-      --host-uname)
-        host_uname="$2"
-        shift 2
-        ;;
-      --)
-        shift
-        break;
-        ;;
-    esac
-  done
-
-  set +e
-  # Remove a possible previously crashed container.
-  docker rm --force "${docker_container_name}" > /dev/null 2> /dev/null
-  set -e
-
-  echo
-  echo "Running \"$(basename "${docker_script}")\" script inside \"${docker_container_name}\" container, image \"${docker_image}\"..."
-
-  # Run the second pass script in a fresh Docker container.
-  ${caffeinate} docker run \
-    --name="${docker_container_name}" \
-    --tty \
-    --hostname "docker" \
-    --workdir="/root" \
-    --volume="${WORK_FOLDER}/..:/Host/Work" \
-    ${docker_image} \
-    /bin/bash "${docker_script}" \
-      --docker-container-name "${docker_container_name}" \
-      $@
-
-  # Remove the container.
-  docker rm --force "${docker_container_name}"
-}
-
-# v===========================================================================v
-run_local_script() {
-
-  while [ $# -gt 0 ]
-  do
-    case "$1" in
-      --script)
-        local_script="$2"
-        shift 2
-        ;;
-      --host-uname)
-        host_uname="$2"
-        shift 2
-        ;;
-      --)
-        shift
-        break;
-        ;;
-    esac
-  done
-
-  echo
-  echo "Running \"$(basename "${local_script}")\" script locally..."
-
-  # Run the second pass script in a local sub-shell.
-  ${caffeinate} /bin/bash "${local_script}" $@
-}
-# ^===========================================================================^
-
-# ----- Functions used in the Docker script. -----
-
-# v===========================================================================v
-
-do_copy_user_so() {
+do_container_linux_copy_user_so() {
   # $1 = dll name
 
   ILIB=$(find ${install_folder}/lib -type f -name $1'.so.*.*' -print)
@@ -697,7 +682,8 @@ do_copy_user_so() {
   fi
 }
 
-do_copy_system_so() {
+# v===========================================================================v
+do_container_linux_copy_system_so() {
   # $1 = dll name
 
   ILIB=$(find /lib/${distro_machine}-linux-gnu /usr/lib/${distro_machine}-linux-gnu -type f -name $1'.so.*.*' -print)
@@ -735,7 +721,8 @@ do_copy_system_so() {
   fi
 }
 
-do_copy_librt_so() {
+# v===========================================================================v
+do_container_linux_copy_librt_so() {
   ILIB=$(find /lib/${distro_machine}-linux-gnu /usr/lib/${distro_machine}-linux-gnu -type f -name 'librt-*.so' -print | grep -v i686)
   if [ ! -z "${ILIB}" ]
   then
@@ -754,12 +741,11 @@ do_copy_librt_so() {
 
 
 # v===========================================================================v
-do_copy_gcc_dll() {
+# $1 = dll name
+do_container_win_copy_gcc_dll() {
 
   # First try Ubuntu specific locations,
   # then do a long full search.
-
-  # $1 = dll name
 
   if [ -f "/usr/lib/gcc/${cross_compile_prefix}/${CROSS_GCC_VERSION}/$1" ]
   then
@@ -781,7 +767,7 @@ do_copy_gcc_dll() {
 }
 
 # v===========================================================================v
-do_copy_gcc_dlls() {
+do_container_win_copy_gcc_dlls() {
 
   if [ -d "/usr/lib/gcc/${cross_compile_prefix}/${CROSS_GCC_VERSION}/" ]
   then
@@ -802,7 +788,7 @@ do_copy_gcc_dlls() {
 }
 
 # v===========================================================================v
-do_copy_libwinpthread_dll() {
+do_container_win_copy_libwinpthread_dll() {
 
   if [ -f "/usr/${cross_compile_prefix}/lib/libwinpthread-1.dll" ]
   then
@@ -816,10 +802,9 @@ do_copy_libwinpthread_dll() {
 }
 
 # v===========================================================================v
-do_copy_license() {
-
-  # $1 - absolute path to input folder
-  # $2 - name of output folder below INSTALL_FOLDER
+# $1 - absolute path to input folder
+# $2 - name of output folder below INSTALL_FOLDER
+do_container_copy_license() {
 
   # Iterate all files in a folder and install some of them in the
   # destination folder
@@ -838,6 +823,62 @@ do_copy_license() {
 }
 
 # v===========================================================================v
+# $1 = dylib name (like libSDL-1.2.0.dylib)
+do_container_mac_copy_built_lib() {
+
+  echo
+  ILIB=$1
+  cp -v "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+}
+
+# v===========================================================================v
+# $1 = dylib name (like libSDL-1.2.0.dylib)
+do_container_mac_change_built_lib() {
+  install_name_tool -change "${install_folder}/lib/$1" \
+    "@executable_path/$1" \
+    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+}
+
+# v===========================================================================v
+# $1 = dylib name (like libXau.6.dylib)
+# $2 = folder (like /opt/X11/lib)
+do_container_mac_change_lib() {
+  install_name_tool -change "$2/$1" \
+    "@executable_path/$1" \
+    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+}
+
+# v===========================================================================v
+# $1 = dylib name (like libXau.6.dylib)
+# $2 = folder (like /opt/X11/lib)
+do_container_mac_copy_lib() {
+
+  echo
+  ILIB=$1
+  cp -v "${2}/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+}
+
+# v===========================================================================v
+do_container_mac_check_lib() {
+
+  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
+  local unxp=$(otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}" | grep -e "macports" -e "homebrew" -e "opt")
+  # echo "|${unxp}|"
+  if [ ! -z "$unxp" ]
+  then
+    exit 1
+  fi
+}
+
+# ^===========================================================================^
+
+
+# ----- General usage functions. -----
+# v===========================================================================v
 do_unix2dos() {
 
   if [ "${target_name}" == "win" ]
@@ -851,7 +892,7 @@ do_unix2dos() {
 }
 
 # v===========================================================================v
-do_strip() {
+do_strip_() {
 
   strip_app="$1"
   shift
@@ -873,55 +914,15 @@ do_strip() {
 }
 
 # v===========================================================================v
-# $1 = dylib name (like libSDL-1.2.0.dylib)
-do_mac_copy_built_lib() {
+do_compute_md5() {
+  # $1 md5 program
+  # $2 options
+  # $3 file
 
-  echo
-  ILIB=$1
-  cp -v "${install_folder}/lib/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-}
-
-# v===========================================================================v
-# $1 = dylib name (like libSDL-1.2.0.dylib)
-do_mac_change_built_lib() {
-  install_name_tool -change "${install_folder}/lib/$1" \
-    "@executable_path/$1" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-}
-
-# v===========================================================================v
-# $1 = dylib name (like libXau.6.dylib)
-# $2 = folder (like /opt/X11/lib)
-do_mac_change_lib() {
-  install_name_tool -change "$2/$1" \
-    "@executable_path/$1" \
-    "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-}
-
-# v===========================================================================v
-# $1 = dylib name (like libXau.6.dylib)
-# $2 = folder (like /opt/X11/lib)
-do_mac_copy_lib() {
-
-  echo
-  ILIB=$1
-  cp -v "${2}/${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  # otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  install_name_tool -id "${ILIB}" "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-}
-
-# v===========================================================================v
-do_mac_check_lib() {
-
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  local unxp=$(otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}" | grep -e "macports" -e "homebrew" -e "opt")
-  # echo "|${unxp}|"
-  if [ ! -z "$unxp" ]
-  then
-    exit 1
-  fi
+  md5_file=$(echo "$3" | sed -e 's/\.[etp][xgk][ezg]$/.md5/')
+  cd $(dirname $3)
+  "$1" "$2" "$(basename $3)" >"${md5_file}"
+  echo "MD5: $(cat ${md5_file})"
 }
 
 # ^===========================================================================^

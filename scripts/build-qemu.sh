@@ -5,7 +5,9 @@
 
 if [[ ! -z ${DEBUG} ]]
 then
-  set -x # Activate the expand mode if DEBUG is anything but empty.
+  set ${DEBUG} # Activate the expand mode if DEBUG is -x.
+else
+  DEBUG=""
 fi
 
 set -o errexit # Exit if command failed.
@@ -337,9 +339,9 @@ fi
 
 # ----- Start build. -----
 
-source "$helper_script" --start-timer
+do_host_start_timer
 
-source "$helper_script" --detect-host
+do_host_detect
 
 # ----- Define build constants. -----
 
@@ -350,14 +352,14 @@ DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
 
 # ----- Prepare prerequisites. -----
 
-source "$helper_script" --prepare-prerequisites
+do_host_prepare_prerequisites
 
 
 # ----- Process "preload-images" action. -----
 
 if [ "${ACTION}" == "preload-images" ]
 then
-  source "$helper_script" --prepare-docker
+  do_host_prepare_docker
 
   echo
   echo "Check/Preload Docker images..."
@@ -377,7 +379,7 @@ then
   echo
   docker images
 
-  source "$helper_script" "--stop-timer"
+  do_host_stop_timer
 
   exit 0
 fi
@@ -387,7 +389,7 @@ fi
 
 if [ "${ACTION}" == "build-images" ]
 then
-  source "$helper_script" --prepare-docker
+  do_host_prepare_docker
 
   echo
   echo "Build Docker images..."
@@ -406,7 +408,7 @@ then
 
   docker images
 
-  source "$helper_script" "--stop-timer"
+  do_host_stop_timer
 
   exit 0
 fi
@@ -415,7 +417,7 @@ fi
 
 if [ -n "${DO_BUILD_WIN32}${DO_BUILD_WIN64}${DO_BUILD_DEB32}${DO_BUILD_DEB64}" ]
 then
-  source "$helper_script" --prepare-docker
+  do_host_prepare_docker
 fi
 
 # ----- Check some more prerequisites. -----
@@ -537,12 +539,12 @@ fi
 
 # ----- Get the current Git branch name. -----
 
-source "$helper_script" "--get-git-head"
+do_host_get_git_head
 
 
 # ----- Get current date. -----
 
-source "$helper_script" "--get-current-date"
+do_host_get_current_date
 
 # ----- Get the Z library. -----
 
@@ -761,7 +763,9 @@ cat <<'EOF' >> "${script_file}"
 
 if [[ ! -z ${DEBUG} ]]
 then
-  set -x # Activate the expand mode if DEBUG is anything but empty.
+  set ${DEBUG} # Activate the expand mode if DEBUG is -x.
+else
+  DEBUG=""
 fi
 
 set -o errexit # Exit if command failed.
@@ -774,6 +778,7 @@ IFS=$'\n\t'
 # -----------------------------------------------------------------------------
 
 EOF
+# The above marker must start in the first column.
 
 # Note: EOF is not quoted to allow local substitutions.
 cat <<EOF >> "${script_file}"
@@ -803,6 +808,7 @@ LIBPIXMAN_FOLDER="${LIBPIXMAN_FOLDER}"
 do_no_strip="${do_no_strip}"
 
 EOF
+# The above marker must start in the first column.
 
 if [ "$HOST_DISTRO_NAME" == "Darwin" ]
 then
@@ -1817,20 +1823,20 @@ then
   if [ "${target_bits}" == "32" ]
   then
 
-    do_copy_gcc_dll "libgcc_s_sjlj-1.dll"
-    do_copy_gcc_dll "libssp-0.dll"
-    do_copy_gcc_dll "libstdc++-6.dll"
+    do_container_win_copy_gcc_dll "libgcc_s_sjlj-1.dll"
+    do_container_win_copy_gcc_dll "libssp-0.dll"
+    do_container_win_copy_gcc_dll "libstdc++-6.dll"
 
-    do_copy_libwinpthread_dll
+    do_container_win_copy_libwinpthread_dll
 
   elif [ "${target_bits}" == "64" ]
   then
 
-    do_copy_gcc_dll "libgcc_s_seh-1.dll"
-    do_copy_gcc_dll "libssp-0.dll"
-    do_copy_gcc_dll "libstdc++-6.dll"
+    do_container_win_copy_gcc_dll "libgcc_s_seh-1.dll"
+    do_container_win_copy_gcc_dll "libssp-0.dll"
+    do_container_win_copy_gcc_dll "libstdc++-6.dll"
 
-    do_copy_libwinpthread_dll
+    do_container_win_copy_libwinpthread_dll
 
   fi
 
@@ -1886,21 +1892,21 @@ then
     distro_machine="i386"
   fi
 
-  do_copy_user_so libSDL-1.2
-  do_copy_user_so libSDL_image-1.2
-  do_copy_user_so libpng16
+  do_container_linux_copy_user_so libSDL-1.2
+  do_container_linux_copy_user_so libSDL_image-1.2
+  do_container_linux_copy_user_so libpng16
 
-  do_copy_user_so libjpeg
-  do_copy_user_so libffi
+  do_container_linux_copy_user_so libjpeg
+  do_container_linux_copy_user_so libffi
 
-  do_copy_user_so libgthread-2.0
-  do_copy_user_so libglib-2.0
-  do_copy_user_so libpixman-1
+  do_container_linux_copy_user_so libgthread-2.0
+  do_container_linux_copy_user_so libglib-2.0
+  do_container_linux_copy_user_so libpixman-1
 
-  # do_copy_system_so libpcre
-  do_copy_user_so libz
+  # do_container_linux_copy_system_so libpcre
+  do_container_linux_copy_user_so libz
 
-  do_copy_librt_so
+  do_container_linux_copy_librt_so
 
   ILIB=$(find /lib/${distro_machine}-linux-gnu /usr/lib/${distro_machine}-linux-gnu -type f -name 'libutil-*.so' -print)
   if [ ! -z "${ILIB}" ]
@@ -1933,77 +1939,77 @@ then
   ILIB=qemu-system-gnuarmeclipse
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
 
-  do_mac_change_built_lib libz.1.dylib
-  do_mac_change_built_lib libSDL-1.2.0.dylib
-  do_mac_change_built_lib libSDL_image-1.2.0.dylib
-  do_mac_change_lib libX11.6.dylib "${X11_FOLDER}/lib"
-  do_mac_change_built_lib libgthread-2.0.0.dylib
-  do_mac_change_built_lib libglib-2.0.0.dylib
-  do_mac_change_built_lib libintl.8.dylib
-  do_mac_change_built_lib libpixman-1.0.dylib
-  do_mac_check_lib
+  do_container_mac_change_built_lib libz.1.dylib
+  do_container_mac_change_built_lib libSDL-1.2.0.dylib
+  do_container_mac_change_built_lib libSDL_image-1.2.0.dylib
+  do_container_mac_change_lib libX11.6.dylib "${X11_FOLDER}/lib"
+  do_container_mac_change_built_lib libgthread-2.0.0.dylib
+  do_container_mac_change_built_lib libglib-2.0.0.dylib
+  do_container_mac_change_built_lib libintl.8.dylib
+  do_container_mac_change_built_lib libpixman-1.0.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libSDL-1.2.0.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libSDL-1.2.0.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libSDL_image-1.2.0.dylib
-  do_mac_change_built_lib libSDL-1.2.0.dylib
-  do_mac_change_built_lib libpng16.16.dylib
-  do_mac_change_built_lib libjpeg.9.dylib
-  do_mac_change_built_lib libz.1.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libSDL_image-1.2.0.dylib
+  do_container_mac_change_built_lib libSDL-1.2.0.dylib
+  do_container_mac_change_built_lib libpng16.16.dylib
+  do_container_mac_change_built_lib libjpeg.9.dylib
+  do_container_mac_change_built_lib libz.1.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libpng16.16.dylib
-  do_mac_change_built_lib libz.1.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libpng16.16.dylib
+  do_container_mac_change_built_lib libz.1.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libjpeg.9.dylib
-  do_mac_change_built_lib libz.1.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libjpeg.9.dylib
+  do_container_mac_change_built_lib libz.1.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libffi.6.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libffi.6.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libiconv.2.dylib 
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libiconv.2.dylib 
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libintl.8.dylib
-  do_mac_change_built_lib libiconv.2.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libintl.8.dylib
+  do_container_mac_change_built_lib libiconv.2.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libglib-2.0.0.dylib
-  do_mac_change_built_lib libiconv.2.dylib
-  do_mac_change_built_lib libintl.8.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libglib-2.0.0.dylib
+  do_container_mac_change_built_lib libiconv.2.dylib
+  do_container_mac_change_built_lib libintl.8.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libgthread-2.0.0.dylib
-  do_mac_change_built_lib libglib-2.0.0.dylib
-  do_mac_change_built_lib libiconv.2.dylib
-  do_mac_change_built_lib libintl.8.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libgthread-2.0.0.dylib
+  do_container_mac_change_built_lib libglib-2.0.0.dylib
+  do_container_mac_change_built_lib libiconv.2.dylib
+  do_container_mac_change_built_lib libintl.8.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libz.1.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libz.1.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libpixman-1.0.dylib  
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libpixman-1.0.dylib  
+  do_container_mac_check_lib
 
-  do_mac_copy_lib libX11.6.dylib "${X11_FOLDER}/lib"
-  do_mac_change_lib libxcb.1.dylib "${X11_FOLDER}/lib"
-  do_mac_change_lib libXau.6.dylib "${X11_FOLDER}/lib"
-  do_mac_change_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
-  do_mac_check_lib
+  do_container_mac_copy_lib libX11.6.dylib "${X11_FOLDER}/lib"
+  do_container_mac_change_lib libxcb.1.dylib "${X11_FOLDER}/lib"
+  do_container_mac_change_lib libXau.6.dylib "${X11_FOLDER}/lib"
+  do_container_mac_change_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
+  do_container_mac_check_lib
 
-  do_mac_copy_lib libxcb.1.dylib "${X11_FOLDER}/lib"
-  do_mac_change_lib libXau.6.dylib "${X11_FOLDER}/lib"
-  do_mac_change_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
-  do_mac_check_lib
+  do_container_mac_copy_lib libxcb.1.dylib "${X11_FOLDER}/lib"
+  do_container_mac_change_lib libXau.6.dylib "${X11_FOLDER}/lib"
+  do_container_mac_change_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
+  do_container_mac_check_lib
 
-  do_mac_copy_lib libXau.6.dylib "${X11_FOLDER}/lib"
-  do_mac_check_lib
+  do_container_mac_copy_lib libXau.6.dylib "${X11_FOLDER}/lib"
+  do_container_mac_check_lib
 
-  do_mac_copy_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
-  do_mac_check_lib
+  do_container_mac_copy_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
+  do_container_mac_check_lib
 
   # Do not strip resulting dylib files!
 
@@ -2020,20 +2026,20 @@ cp "${git_folder}/gnuarmeclipse/images/"* \
 echo
 echo "Copying license files..."
 
-do_copy_license "${git_folder}" "qemu-$(cat ${git_folder}/VERSION)"
-do_copy_license "${work_folder}/${LIBGETTEXT_FOLDER}" "${LIBGETTEXT_FOLDER}"
-do_copy_license "${work_folder}/${LIBGLIB_FOLDER}" "${LIBGLIB_FOLDER}"
-do_copy_license "${work_folder}/${LIBPNG_FOLDER}" "${LIBPNG_FOLDER}"
-do_copy_license "${work_folder}/${LIBJPG_FOLDER}" "${LIBJPG_FOLDER}"
-do_copy_license "${work_folder}/${LIBSDL_FOLDER}" "${LIBSDL_FOLDER}"
-do_copy_license "${work_folder}/${LIBSDL_IMAGE_FOLDER}" "${LIBSDL_IMAGE_FOLDER}"
-do_copy_license "${work_folder}/${LIBFFI_FOLDER}" "${LIBFFI_FOLDER}"
-do_copy_license "${work_folder}/${LIBZ_FOLDER}" "${LIBZ_FOLDER}"
-do_copy_license "${work_folder}/${LIBPIXMAN_FOLDER}" "${LIBPIXMAN_FOLDER}"
+do_container_copy_license "${git_folder}" "qemu-$(cat ${git_folder}/VERSION)"
+do_container_copy_license "${work_folder}/${LIBGETTEXT_FOLDER}" "${LIBGETTEXT_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBGLIB_FOLDER}" "${LIBGLIB_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBPNG_FOLDER}" "${LIBPNG_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBJPG_FOLDER}" "${LIBJPG_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBSDL_FOLDER}" "${LIBSDL_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBSDL_IMAGE_FOLDER}" "${LIBSDL_IMAGE_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBFFI_FOLDER}" "${LIBFFI_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBZ_FOLDER}" "${LIBZ_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBPIXMAN_FOLDER}" "${LIBPIXMAN_FOLDER}"
 
 if [ "${target_name}" != "debian" ]
 then
-  do_copy_license "${work_folder}/${LIBICONV_FOLDER}" "${LIBICONV_FOLDER}"
+  do_container_copy_license "${work_folder}/${LIBICONV_FOLDER}" "${LIBICONV_FOLDER}"
 fi
 
 if [ "${target_name}" == "win" ]
@@ -2045,7 +2051,7 @@ fi
 
 # ----- Copy the GNU ARM Eclipse info files. -----
 
-source "$helper_script" --copy-info
+do_container_copy_info
 
 
 # ----- Create the distribution package. -----
@@ -2064,10 +2070,10 @@ fi
 
 distribution_executable_name="qemu-system-gnuarmeclipse"
 
-source "$helper_script" --create-distribution
+do_container_create_distribution
 
 # Requires ${distribution_file} and ${result}
-source "$helper_script" --completed
+do_container_completed
 
 exit 0
 
@@ -2082,7 +2088,7 @@ if [ "${HOST_UNAME}" == "Darwin" ]
 then
   if [ "${DO_BUILD_OSX}" == "y" ]
   then
-    do_build_target "Creating OS X package..." \
+    do_host_build_target "Creating OS X package..." \
       --target-name osx
   fi
 fi
@@ -2091,7 +2097,7 @@ fi
 
 if [ "${DO_BUILD_WIN64}" == "y" ]
 then
-  do_build_target "Creating Windows 64-bits setup..." \
+  do_host_build_target "Creating Windows 64-bits setup..." \
     --target-name win \
     --target-bits 64 \
     --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
@@ -2101,7 +2107,7 @@ fi
 
 if [ "${DO_BUILD_WIN32}" == "y" ]
 then
-  do_build_target "Creating Windows 32-bits setup..." \
+  do_host_build_target "Creating Windows 32-bits setup..." \
     --target-name win \
     --target-bits 32 \
     --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
@@ -2111,7 +2117,7 @@ fi
 
 if [ "${DO_BUILD_DEB64}" == "y" ]
 then
-  do_build_target "Creating Debian 64-bits archive..." \
+  do_host_build_target "Creating Debian 64-bits archive..." \
     --target-name debian \
     --target-bits 64 \
     --docker-image "ilegeul/debian:8-gnuarm-gcc-x11-v4"
@@ -2121,7 +2127,7 @@ fi
 
 if [ "${DO_BUILD_DEB32}" == "y" ]
 then
-  do_build_target "Creating Debian 32-bits archive..." \
+  do_host_build_target "Creating Debian 32-bits archive..." \
     --target-name debian \
     --target-bits 32 \
     --docker-image "ilegeul/debian32:8-gnuarm-gcc-x11-v4"

@@ -5,7 +5,9 @@
 
 if [[ ! -z ${DEBUG} ]]
 then
-  set -x # Activate the expand mode if DEBUG is anything but empty.
+  set ${DEBUG} # Activate the expand mode if DEBUG is -x.
+else
+  DEBUG=""
 fi
 
 set -o errexit # Exit if command failed.
@@ -282,9 +284,9 @@ fi
 
 # ----- Start build. -----
 
-source "$helper_script" --start-timer
+do_host_start_timer
 
-source "$helper_script" --detect-host
+do_host_detect
 
 # ----- Define build constants. -----
 
@@ -295,13 +297,13 @@ DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
 
 # ----- Prepare prerequisites. -----
 
-source "$helper_script" --prepare-prerequisites
+do_host_prepare_prerequisites
 
 # ----- Process "preload-images" action. -----
 
 if [ "${ACTION}" == "preload-images" ]
 then
-  source "$helper_script" --prepare-docker
+  do_host_prepare_docker
 
   echo
   echo "Check/Preload Docker images..."
@@ -321,7 +323,7 @@ then
   echo
   docker images
 
-  source "$helper_script" "--stop-timer"
+  do_host_stop_timer
 
   exit 0
 fi
@@ -331,7 +333,7 @@ fi
 
 if [ "${ACTION}" == "build-images" ]
 then
-  source "$helper_script" --prepare-docker
+  do_host_prepare_docker
 
   # Remove most build and temporary folders.
   echo
@@ -351,7 +353,7 @@ then
 
   docker images
 
-  source "$helper_script" "--stop-timer"
+  do_host_stop_timer
 
   exit 0
 fi
@@ -360,7 +362,7 @@ fi
 
 if [ -n "${DO_BUILD_WIN32}${DO_BUILD_WIN64}${DO_BUILD_DEB32}${DO_BUILD_DEB64}" ]
 then
-  source "$helper_script" --prepare-docker
+  do_host_prepare_docker
 fi
 
 # ----- Check some more prerequisites. -----
@@ -494,12 +496,12 @@ fi
 
 # Get the current Git branch name, to know if we are building the stable or
 # the development release.
-source "$helper_script" "--get-git-head"
+do_host_get_git_head
 
 # ----- Get current date. -----
 
 # Use the UTC date as version in the name of the distribution file.
-source "$helper_script" "--get-current-date"
+do_host_get_current_date
 
 # ----- Get the USB libraries. -----
 
@@ -634,6 +636,8 @@ cat <<'EOF' >> "${script_file}"
 if [[ ! -z ${DEBUG} ]]
 then
   set -x # Activate the expand mode if DEBUG is anything but empty.
+else
+  DEBUG=""
 fi
 
 set -o errexit # Exit if command failed.
@@ -646,6 +650,7 @@ IFS=$'\n\t'
 # -----------------------------------------------------------------------------
 
 EOF
+# The above marker must start in the first column.
 
 # Note: EOF is not quoted to allow local substitutions.
 cat <<EOF >> "${script_file}"
@@ -666,6 +671,7 @@ HIDAPI="${HIDAPI}"
 do_no_strip="${do_no_strip}"
 
 EOF
+# The above marker must start in the first column.
 
 # Propagate DEBUG to guest.
 set +u
@@ -1343,13 +1349,13 @@ then
 
   if [ "${target_bits}" == "32" ]
   then
-    do_copy_gcc_dll "libgcc_s_sjlj-1.dll"
+    do_container_win_copy_gcc_dll "libgcc_s_sjlj-1.dll"
   elif [ "${target_bits}" == "64" ]
   then
-    do_copy_gcc_dll "libgcc_s_seh-1.dll"
+    do_container_win_copy_gcc_dll "libgcc_s_seh-1.dll"
   fi
 
-  do_copy_libwinpthread_dll
+  do_container_win_copy_libwinpthread_dll
 
   # Copy possible DLLs. Currently only libusb0.dll is dynamic, all other
   # are also compiled as static.
@@ -1398,12 +1404,12 @@ then
     distro_machine="i386"
   fi
 
-  do_copy_user_so libusb-1.0
-  do_copy_user_so libusb-0.1
-  do_copy_user_so libftdi1
+  do_container_linux_copy_user_so libusb-1.0
+  do_container_linux_copy_user_so libusb-0.1
+  do_container_linux_copy_user_so libftdi1
 
-  do_copy_system_so libudev
-  do_copy_librt_so
+  do_container_linux_copy_system_so libudev
+  do_container_linux_copy_librt_so
 
 elif [ "${target_name}" == "osx" ]
 then
@@ -1423,20 +1429,20 @@ then
 
   install_name_tool -change "libftdi1.2.dylib" "@executable_path/libftdi1.2.dylib" \
     "${install_folder}/${APP_LC_NAME}/bin/openocd"
-  do_mac_change_built_lib libusb-1.0.0.dylib
-  do_mac_change_built_lib libusb-0.1.4.dylib
-  do_mac_check_lib
+  do_container_mac_change_built_lib libusb-1.0.0.dylib
+  do_container_mac_change_built_lib libusb-0.1.4.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libftdi1.2.dylib
-  do_mac_change_built_lib libusb-1.0.0.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libftdi1.2.dylib
+  do_container_mac_change_built_lib libusb-1.0.0.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libusb-0.1.4.dylib
-  do_mac_change_built_lib libusb-1.0.0.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libusb-0.1.4.dylib
+  do_container_mac_change_built_lib libusb-1.0.0.dylib
+  do_container_mac_check_lib
 
-  do_mac_copy_built_lib libusb-1.0.0.dylib
-  do_mac_check_lib
+  do_container_mac_copy_built_lib libusb-1.0.0.dylib
+  do_container_mac_check_lib
 
 fi
 
@@ -1445,16 +1451,16 @@ fi
 echo
 echo "Copying license files..."
 
-do_copy_license "${git_folder}" "openocd"
-do_copy_license "${work_folder}/${HIDAPI_FOLDER}" "${HIDAPI_FOLDER}"
-do_copy_license "${work_folder}/${LIBFTDI_FOLDER}" "${LIBFTDI_FOLDER}"
-do_copy_license "${work_folder}/${LIBUSB1_FOLDER}" "${LIBUSB1_FOLDER}"
+do_container_copy_license "${git_folder}" "openocd"
+do_container_copy_license "${work_folder}/${HIDAPI_FOLDER}" "${HIDAPI_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBFTDI_FOLDER}" "${LIBFTDI_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBUSB1_FOLDER}" "${LIBUSB1_FOLDER}"
 
 if [ "${target_name}" == "win" ]
 then
-  do_copy_license "${work_folder}/${LIBUSB_W32_FOLDER}" "${LIBUSB_W32}"
+  do_container_copy_license "${work_folder}/${LIBUSB_W32_FOLDER}" "${LIBUSB_W32}"
 else
-  do_copy_license "${work_folder}/${LIBUSB0_FOLDER}" "${LIBUSB0_FOLDER}"
+  do_container_copy_license "${work_folder}/${LIBUSB0_FOLDER}" "${LIBUSB0_FOLDER}"
 fi
 
 if [ "${target_name}" == "win" ]
@@ -1466,7 +1472,7 @@ fi
 
 # ----- Copy the GNU ARM Eclipse info files. -----
 
-source "$helper_script" --copy-info
+do_container_copy_info
 
 
 # ----- Create the distribution package. -----
@@ -1483,10 +1489,10 @@ fi
 
 distribution_executable_name="openocd"
 
-source "$helper_script" --create-distribution
+do_container_create_distribution
 
 # Requires ${distribution_file} and ${result}
-source "$helper_script" --completed
+do_container_completed
 
 exit 0
 
@@ -1501,7 +1507,7 @@ if [ "${HOST_UNAME}" == "Darwin" ]
 then
   if [ "${DO_BUILD_OSX}" == "y" ]
   then
-    do_build_target "Creating OS X package..." \
+    do_host_build_target "Creating OS X package..." \
       --target-name osx
   fi
 fi
@@ -1510,7 +1516,7 @@ fi
 
 if [ "${DO_BUILD_WIN64}" == "y" ]
 then
-  do_build_target "Creating Windows 64-bits setup..." \
+  do_host_build_target "Creating Windows 64-bits setup..." \
     --target-name win \
     --target-bits 64 \
     --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
@@ -1520,7 +1526,7 @@ fi
 
 if [ "${DO_BUILD_WIN32}" == "y" ]
 then
-  do_build_target "Creating Windows 32-bits setup..." \
+  do_host_build_target "Creating Windows 32-bits setup..." \
     --target-name win \
     --target-bits 32 \
     --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
@@ -1530,7 +1536,7 @@ fi
 
 if [ "${DO_BUILD_DEB64}" == "y" ]
 then
-  do_build_target "Creating Debian 64-bits archive..." \
+  do_host_build_target "Creating Debian 64-bits archive..." \
     --target-name debian \
     --target-bits 64 \
     --docker-image "ilegeul/debian:8-gnuarm-gcc-x11-v4"
@@ -1540,7 +1546,7 @@ fi
 
 if [ "${DO_BUILD_DEB32}" == "y" ]
 then
-  do_build_target "Creating Debian 32-bits archive..." \
+  do_host_build_target "Creating Debian 32-bits archive..." \
     --target-name debian \
     --target-bits 32 \
     --docker-image "ilegeul/debian32:8-gnuarm-gcc-x11-v4"
@@ -1548,7 +1554,7 @@ fi
 
 cat "${WORK_FOLDER}/output/"*.md5
 
-source "$helper_script" "--stop-timer"
+do_host_stop_timer
 
 # ----- Done. -----
 exit 0

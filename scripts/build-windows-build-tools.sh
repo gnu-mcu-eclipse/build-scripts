@@ -5,7 +5,9 @@
 
 if [[ ! -z ${DEBUG} ]]
 then
-  set -x # Activate the expand mode if DEBUG is anything but empty.
+  set ${DEBUG} # Activate the expand mode if DEBUG is -x.
+else
+  DEBUG=""
 fi
 
 set -o errexit # Exit if command failed.
@@ -242,9 +244,9 @@ fi
 
 # ----- Start build. -----
 
-source "$helper_script" --start-timer
+do_host_start_timer
 
-source "$helper_script" --detect-host
+do_host_detect
 
 # ----- Define build constants. -----
 
@@ -255,13 +257,13 @@ DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
 
 # ----- Prepare prerequisites. -----
 
-source "$helper_script" --prepare-prerequisites
+do_host_prepare_prerequisites
 
 # ----- Process "preload-images" action. -----
 
 if [ "${ACTION}" == "preload-images" ]
 then
-  source "$helper_script" --prepare-docker
+  do_host_prepare_docker
 
   echo
   echo "Check/Preload Docker images..."
@@ -273,7 +275,7 @@ then
   echo
   docker images
 
-  source "$helper_script" "--stop-timer"
+  do_host_stop_timer
 
   exit 0
 fi
@@ -297,7 +299,7 @@ then
 
   docker images
 
-  source "$helper_script" "--stop-timer"
+  do_host_stop_timer
 
   exit 0
 fi
@@ -306,7 +308,7 @@ fi
 
 if [ -n "${DO_BUILD_WIN32}${DO_BUILD_WIN64}" ]
 then
-  source "$helper_script" --prepare-docker
+  do_host_prepare_docker
 fi
 
 # ----- Check some more prerequisites. -----
@@ -348,12 +350,12 @@ fi
 
 # ----- Get the current Git branch name. -----
 
-# source "$helper_script" "--get-git-head"
+# do_host_get_git_head
 
 
 # ----- Get current date. -----
 
-source "$helper_script" "--get-current-date"
+do_host_get_current_date
 
 # ----- Get make. -----
 
@@ -415,6 +417,8 @@ cat <<'EOF' >> "${script_file}"
 if [[ ! -z ${DEBUG} ]]
 then
   set -x # Activate the expand mode if DEBUG is anything but empty.
+else
+  DEBUG=""
 fi
 
 set -o errexit # Exit if command failed.
@@ -427,6 +431,7 @@ IFS=$'\n\t'
 # -----------------------------------------------------------------------------
 
 EOF
+# The above marker must start in the first column.
 
 # Note: EOF is not quoted to allow local substitutions.
 cat <<EOF >> "${script_file}"
@@ -442,6 +447,7 @@ BUSYBOX_COMMIT="${BUSYBOX_COMMIT}"
 BUSYBOX_ARCHIVE="${BUSYBOX_ARCHIVE}"
 
 EOF
+# The above marker must start in the first column.
 
 # Propagate DEBUG to guest.
 set +u
@@ -643,7 +649,7 @@ rm -rf "${install_folder}"
 make install \
 | tee "${output_folder}/make-install-output.txt"
 
-do_strip ${cross_compile_prefix}-strip "${install_folder}/make-${MAKE_VERSION}/bin/make.exe"
+${cross_compile_prefix}-strip "${install_folder}/make-${MAKE_VERSION}/bin/make.exe"
 
 # ----- Copy files to the install bin folder -----
 
@@ -716,7 +722,7 @@ echo "Installing BusyBox..."
 
 mkdir -p "${install_folder}/build-tools/bin"
 cp -v "${busybox_build_folder}/busybox.exe" "${install_folder}/build-tools/bin/busybox.exe"
-do_strip ${cross_compile_prefix}-strip "${install_folder}/build-tools/bin/busybox.exe"
+${cross_compile_prefix}-strip "${install_folder}/build-tools/bin/busybox.exe"
 
 cp -v "${install_folder}/build-tools/bin/busybox.exe" "${install_folder}/build-tools/bin/sh.exe"
 cp -v "${install_folder}/build-tools/bin/busybox.exe" "${install_folder}/build-tools/bin/rm.exe"
@@ -727,8 +733,8 @@ cp -v "${install_folder}/build-tools/bin/busybox.exe" "${install_folder}/build-t
 echo
 echo "Copying license files..."
 
-do_copy_license "${make_build_folder}" "make-${MAKE_VERSION}"
-do_copy_license "${busybox_build_folder}" "busybox"
+do_container_copy_license "${make_build_folder}" "make-${MAKE_VERSION}"
+do_container_copy_license "${busybox_build_folder}" "busybox"
 
 # For Windows, process cr lf
 find "${install_folder}/${APP_LC_NAME}/license" -type f \
@@ -744,13 +750,13 @@ mkdir -p "${install_folder}/build-tools/gnuarmeclipse"
 
 cp -v "${git_folder}/gnuarmeclipse/info/INFO.txt" \
   "${install_folder}/build-tools/INFO.txt"
-unix2dos "${install_folder}/build-tools/INFO.txt"
+do_unix2dos "${install_folder}/build-tools/INFO.txt"
 cp -v "${git_folder}/gnuarmeclipse/info/BUILD.txt" \
   "${install_folder}/build-tools/gnuarmeclipse/BUILD.txt"
-unix2dos "${install_folder}/build-tools/gnuarmeclipse/BUILD.txt"
+do_unix2dos "${install_folder}/build-tools/gnuarmeclipse/BUILD.txt"
 cp -v "${git_folder}/gnuarmeclipse/info/CHANGES.txt" \
   "${install_folder}/build-tools/gnuarmeclipse/"
-unix2dos "${install_folder}/build-tools/gnuarmeclipse/CHANGES.txt"
+do_unix2dos "${install_folder}/build-tools/gnuarmeclipse/CHANGES.txt"
 
 # Copy the current build script
 cp -v "${work_folder}/scripts/build-${APP_LC_NAME}.sh" \
@@ -769,7 +775,7 @@ do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/config.log"
 # Not passed as is, used by makensis for the MUI_PAGE_LICENSE; must be DOS.
 cp -v "${git_folder}/COPYING" \
   "${install_folder}/build-tools/COPYING"
-unix2dos "${install_folder}/build-tools/COPYING"
+do_unix2dos "${install_folder}/build-tools/COPYING"
 
 
 # ----- Create the distribution setup. -----
@@ -786,7 +792,7 @@ distribution_file="${distribution_folder}/gnuarmeclipse-${APP_LC_NAME}-${target_
 # Not passed as it, used by makensis for the MUI_PAGE_LICENSE; must be DOS.
 cp "${git_folder}/COPYING" \
   "${install_folder}/${APP_LC_NAME}/COPYING"
-unix2dos "${install_folder}/${APP_LC_NAME}/COPYING"
+do_unix2dos "${install_folder}/${APP_LC_NAME}/COPYING"
 
 nsis_folder="${git_folder}/gnuarmeclipse/nsis"
 nsis_file="${nsis_folder}/gnuarmeclipse-${APP_LC_NAME}.nsi"
@@ -820,7 +826,7 @@ then
 fi
 
 # Requires ${distribution_file} and ${result}
-source "$helper_script" --completed
+do_container_completed
 
 exit 0
 
@@ -834,7 +840,7 @@ EOF
 
 if [ "${DO_BUILD_WIN64}" == "y" ]
 then
-  do_build_target "Creating Windows 64-bits setup..." \
+  do_host_build_target "Creating Windows 64-bits setup..." \
     --target-name win \
     --target-bits 64 \
     --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
@@ -844,7 +850,7 @@ fi
 
 if [ "${DO_BUILD_WIN32}" == "y" ]
 then
-  do_build_target "Creating Windows 32-bits setup..." \
+  do_host_build_target "Creating Windows 32-bits setup..." \
     --target-name win \
     --target-bits 32 \
     --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
@@ -852,7 +858,7 @@ fi
 
 cat "${WORK_FOLDER}/output/"*.md5
 
-source "$helper_script" "--stop-timer"
+do_host_stop_timer
 
 # ----- Done. -----
 exit 0
