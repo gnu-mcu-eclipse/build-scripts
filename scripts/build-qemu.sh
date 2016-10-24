@@ -1705,6 +1705,7 @@ then
       --cross-prefix="${cross_compile_prefix}-" \
       \
       --extra-cflags="-g -pipe -I${install_folder}/include -Wno-missing-format-attribute -Wno-pointer-to-int-cast -D_POSIX=1 -mthreads" \
+      --disable-werror \
       --extra-ldflags="-v -L${install_folder}/lib" \
       --target-list="gnuarmeclipse-softmmu" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
@@ -1724,6 +1725,7 @@ then
     \
     bash "${git_folder}/configure" \
       --extra-cflags="-g -pipe -I${install_folder}/include -Wno-missing-format-attribute -Wno-error=format=" \
+      --disable-werror \
       --extra-ldflags="-v -L${install_folder}/lib" \
       --target-list="gnuarmeclipse-softmmu" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
@@ -1743,6 +1745,7 @@ then
     \
     bash "${git_folder}/configure" \
       --extra-cflags="-g -pipe -I${install_folder}/include -I${X11_FOLDER}/include -Wno-missing-format-attribute" \
+      --disable-werror \
       --extra-ldflags="-v -L${install_folder}/lib -L${X11_FOLDER}/lib -lX11" \
       --target-list="gnuarmeclipse-softmmu" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
