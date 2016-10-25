@@ -21,24 +21,26 @@ IFS=$'\n\t'
 
 # Script to cross build the 32/64-bit Windows version of Build Tools 
 # with MinGW-w64 on GNU/Linux.
-# Developed on OS X using a Debian 8 x64 Docker container.
+#
+# Developed on OS X 10.12 Sierra.
+# Also tested on:
+#   GNU/Linux Arch (Manjaro 16.08)
+#
+# The Windows packages are build using Debian 8 x64 Docker containers.
 # The build is structured in 2 steps, one running on the host machine
 # and one running inside the Docker container.
-
-# Note: the 64-bits is not yet functional, BusyBox sh.exe fails.
-
+#
 # At first run, Docker will download/build a relatively large
 # image (2.5GB) from Docker Hub.
-
+#
 # Prerequisites:
 #
 #   Docker
 #   curl, git, automake, patch, tar, unzip
 #
-# sudo apt-get install git libtool autoconf automake autotools-dev pkg-config
-# sudo apt-get install texinfo texlive dos2unix nsis
-# sudo apt-get install mingw-w64 mingw-w64-tools mingw-w64-i686-dev 
-# sudo apt-get install autopoint gettext
+# When running on OS X, a custom Homebrew is required to provide the 
+# missing libraries and TeX binaries.
+#
 
 # Mandatory definitions.
 APP_NAME="Windows Build Tools"

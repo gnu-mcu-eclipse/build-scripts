@@ -21,9 +21,9 @@ IFS=$'\n\t'
 
 # Script to build the GNU ARM Eclipse OpenOCD distribution packages.
 #
-# Developed on OS X.
+# Developed on OS X 10.12 Sierra.
 # Also tested on:
-#   -
+#   GNU/Linux Arch (Manjaro 16.08)
 #
 # The Windows and GNU/Linux packages are build using Docker containers.
 # The build is structured in 2 steps, one running on the host machine
@@ -37,11 +37,8 @@ IFS=$'\n\t'
 #   Docker
 #   curl, git, automake, patch, tar, unzip
 #
-# When running on OS X, MacPorts with the following ports installed:
-#
-#   sudo port install libtool automake autoconf pkgconfig
-#   sudo port install cmake boost libconfuse swig-python
-#   sudo port install texinfo texlive
+# When running on OS X, a custom Homebrew is required to provide the 
+# missing libraries and TeX binaries.
 #
 
 # Mandatory definition.
