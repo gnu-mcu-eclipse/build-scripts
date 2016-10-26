@@ -513,6 +513,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBUSB1_ARCHIVE}\"..."
   curl -L "http://sourceforge.net/projects/libusb/files/libusb-1.0/${LIBUSB1_FOLDER}/${LIBUSB1_ARCHIVE}" \
     --output "${LIBUSB1_ARCHIVE}"
 fi
@@ -532,6 +533,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBUSB0_ARCHIVE}\"..."
   curl -L "http://sourceforge.net/projects/libusb/files/libusb-compat-0.1/${LIBUSB0_FOLDER}/${LIBUSB0_ARCHIVE}" \
     --output "${LIBUSB0_ARCHIVE}"
 fi
@@ -551,6 +553,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBUSB_W32_ARCHIVE}\"..."
   curl -L "http://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/${LIBUSB_W32_VERSION}/${LIBUSB_W32_ARCHIVE}" \
     --output "${LIBUSB_W32_ARCHIVE}"
 fi
@@ -575,6 +578,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBFTDI_ARCHIVE}\"..."
   curl -L "http://www.intra2net.com/en/developer/libftdi/download/${LIBFTDI_ARCHIVE}" \
     --output "${LIBFTDI_ARCHIVE}"
 fi
@@ -601,6 +605,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${HIDAPI_ARCHIVE}\"..."
   curl -L "https://github.com/downloads/signal11/hidapi/${HIDAPI_ARCHIVE}" \
     --output "${HIDAPI_ARCHIVE}"
 fi

@@ -370,6 +370,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${MSYS2_MAKE_PACK_ARCH}\"..."
   curl -L "${MSYS2_MAKE_PACK_URL}" \
     --output "${MSYS2_MAKE_PACK_ARCH}"
 fi
@@ -394,6 +395,7 @@ fi
 if [ ! -f "${DOWNLOAD_FOLDER}/${BUSYBOX_ARCHIVE}" ]
 then
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${BUSYBOX_ARCHIVE}\"..."
   curl -L "${BUSYBOX_URL}" --output "${BUSYBOX_ARCHIVE}"
 fi
 
