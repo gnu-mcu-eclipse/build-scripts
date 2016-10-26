@@ -301,6 +301,8 @@ do_host_build_target() {
       --host-uname "${HOST_UNAME}"
 
   fi
+
+  echo "do_host_build_target $@ completed"
 }
 
 # v===========================================================================v
@@ -354,6 +356,8 @@ run_docker_script() {
 
   # Remove the container.
   docker rm --force "${docker_container_name}"
+
+  # echo "2|$@|"
 }
 
 # v===========================================================================v
@@ -382,6 +386,8 @@ run_local_script() {
 
   # Run the second pass script in a local sub-shell.
   ${caffeinate} /bin/bash ${DEBUG} "${local_script}" $@
+
+  # echo "1|$@|"
 }
 # ^===========================================================================^
 
@@ -866,7 +872,7 @@ do_container_mac_copy_lib() {
 do_container_mac_check_lib() {
 
   otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  local unxp=$(otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}" | grep -e "macports" -e "homebrew" -e "opt")
+  local unxp=$(otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}" | sed '1d' | grep -e "macports" -e "homebrew" -e "opt" -e "install")
   # echo "|${unxp}|"
   if [ ! -z "$unxp" ]
   then
