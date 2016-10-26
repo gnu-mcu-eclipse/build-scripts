@@ -21,15 +21,13 @@ IFS=$'\n\t'
 
 # Script to build the GNU ARM Eclipse QEMU distribution packages.
 #
-# Developed on OS X.
+# Developed on OS X 10.12 Sierra.
 # Also tested on:
-#   -
+#   GNU/Linux Arch (Manjaro 16.08)
 #
 # The Windows and GNU/Linux packages are build using Docker containers.
 # The build is structured in 2 steps, one running on the host machine
 # and one running inside the Docker container.
-#
-# Note: The Windows 64-bits executable fails when timers are enabled.
 #
 # At first run, Docker will download/build 3 relatively large
 # images (1-2GB) from Docker Hub.
@@ -39,10 +37,8 @@ IFS=$'\n\t'
 #   Docker
 #   curl, git, automake, patch, tar, unzip
 #
-# When running on OS X, MacPorts with the following ports installed:
-#
-#   sudo port install libtool automake autoconf pkgconfig
-#   sudo port install texinfo texlive
+# When running on OS X, a custom Homebrew is required to provide the 
+# missing libraries and TeX binaries.
 #
 
 # Mandatory definition.
@@ -210,19 +206,22 @@ source "$helper_script"
 # http://zlib.net
 # https://sourceforge.net/projects/libpng/files/zlib/
 
-LIBZ_VERSION="1.2.8"
+LIBZ_VERSION="1.2.8" # 2013-06-07
+
 LIBZ_FOLDER="zlib-${LIBZ_VERSION}"
 LIBZ_ARCHIVE="${LIBZ_FOLDER}.tar.gz"
 LIBZ_URL="https://sourceforge.net/projects/libpng/files/zlib/${LIBZ_VERSION}/${LIBZ_ARCHIVE}"
 
 
-# SDL_image 1.2 requires PNG 12
-# https://sourceforge.net/projects/libpng/files/libpng12/1.2.53/
+# To ensure builds stability, use slightly older releases.
+# https://sourceforge.net/projects/libpng/files/libpng16/older-releases/
 
-LIBPNG_VERSION="1.6.17"
 #LIBPNG_VERSION="1.2.53"
-LIBPNG_SFOLDER="libpng16"
+#LIBPNG_VERSION="1.6.17"
+LIBPNG_VERSION="1.6.23" # 2016-06-09
 #LIBPNG_SFOLDER="libpng12"
+LIBPNG_SFOLDER="libpng16"
+
 LIBPNG_FOLDER="libpng-${LIBPNG_VERSION}"
 LIBPNG_ARCHIVE="${LIBPNG_FOLDER}.tar.gz"
 # LIBPNG_URL="https://sourceforge.net/projects/libpng/files/${LIBPNG_SFOLDER}/${LIBPNG_VERSION}/${LIBPNG_ARCHIVE}"
@@ -232,33 +231,39 @@ LIBPNG_URL="https://sourceforge.net/projects/libpng/files/${LIBPNG_SFOLDER}/olde
 # http://www.ijg.org
 # http://www.ijg.org/files/
 
-LIBJPG_VERSION="9a"
+# LIBJPG_VERSION="9a"
+LIBJPG_VERSION="9b" # 2016-01-17
+
 LIBJPG_FOLDER="jpeg-${LIBJPG_VERSION}"
 LIBJPG_ARCHIVE="jpegsrc.v${LIBJPG_VERSION}.tar.gz"
 LIBJPG_URL="http://www.ijg.org/files/${LIBJPG_ARCHIVE}"
 
-# https://www.libsdl.org/download-1.2.php
-# https://www.libsdl.org/release/SDL-1.2.15.tar.gz
 
-LIBSDL_VERSION="1.2.15"
+# https://www.libsdl.org/download-1.2.php
+# https://www.libsdl.org/release
+
+LIBSDL_VERSION="1.2.15" # 2013-08-17
+
 LIBSDL_FOLDER="SDL-${LIBSDL_VERSION}"
 LIBSDL_ARCHIVE="${LIBSDL_FOLDER}.tar.gz"
 LIBSDL_URL="https://www.libsdl.org/release/${LIBSDL_ARCHIVE}"
 
 
 # https://www.libsdl.org/projects/SDL_image/release-1.2.html
-# https://www.libsdl.org/projects/SDL_image/release/SDL_image-1.2.12.tar.gz
+# https://www.libsdl.org/projects/SDL_image/release
 
 # Revert to 1.2.10 due to OS X El Capitan glitches.
-LIBSDL_IMAGE_VERSION="1.2.10"
+LIBSDL_IMAGE_VERSION="1.2.10" # 2013-08-17
+
 LIBSDL_IMAGE_FOLDER="SDL_image-${LIBSDL_IMAGE_VERSION}"
 LIBSDL_IMAGE_ARCHIVE="${LIBSDL_IMAGE_FOLDER}.tar.gz"
 LIBSDL_IMAGE_URL="https://www.libsdl.org/projects/SDL_image/release/${LIBSDL_IMAGE_ARCHIVE}"
 
 
-# ftp://sourceware.org/pub/libffi/libffi-3.2.1.tar.gz
+# ftp://sourceware.org/pub/libffi
 
-LIBFFI_VERSION="3.2.1"
+LIBFFI_VERSION="3.2.1" # 2014-11-12
+
 LIBFFI_FOLDER="libffi-${LIBFFI_VERSION}"
 LIBFFI_ARCHIVE="${LIBFFI_FOLDER}.tar.gz"
 LIBFFI_URL="ftp://sourceware.org/pub/libffi/${LIBFFI_ARCHIVE}"
@@ -267,7 +272,8 @@ LIBFFI_URL="ftp://sourceware.org/pub/libffi/${LIBFFI_ARCHIVE}"
 # http://www.gnu.org/software/libiconv/
 # http://ftp.gnu.org/pub/gnu/libiconv/
 
-LIBICONV_VERSION="1.14"
+LIBICONV_VERSION="1.14" # 2011-08-07
+
 LIBICONV_FOLDER="libiconv-${LIBICONV_VERSION}"
 LIBICONV_ARCHIVE="${LIBICONV_FOLDER}.tar.gz"
 LIBICONV_URL="http://ftp.gnu.org/pub/gnu/libiconv/${LIBICONV_ARCHIVE}"
@@ -275,16 +281,29 @@ LIBICONV_URL="http://ftp.gnu.org/pub/gnu/libiconv/${LIBICONV_ARCHIVE}"
 
 # http://ftp.gnu.org/pub/gnu/gettext/
 
-LIBGETTEXT_VERSION="0.19.5.1"
+# LIBGETTEXT_VERSION="0.19.5.1"
+LIBGETTEXT_VERSION="0.19.8.1" # 2016-06-11
+
 LIBGETTEXT_FOLDER="gettext-${LIBGETTEXT_VERSION}"
 LIBGETTEXT_ARCHIVE="${LIBGETTEXT_FOLDER}.tar.xz"
 LIBGETTEXT_URL="http://ftp.gnu.org/pub/gnu/gettext/${LIBGETTEXT_ARCHIVE}"
 
 
-# http://ftp.gnome.org/pub/GNOME/sources/glib/2.44/glib-2.44.1.tar.xz
+# https://sourceforge.net/projects/pcre/files/pcre/
 
-LIBGLIB_MVERSION="2.44"
-LIBGLIB_VERSION="${LIBGLIB_MVERSION}.1"
+LIBPCRE_VERSION="8.39" # 2016-06-17
+
+LIBPCRE_FOLDER="pcre-${LIBPCRE_VERSION}"
+LIBPCRE_ARCHIVE="${LIBPCRE_FOLDER}.tar.bz2"
+LIBPCRE_URL="https://sourceforge.net/projects/pcre/files/pcre/${LIBPCRE_VERSION}/${LIBPCRE_ARCHIVE}"
+
+
+# http://ftp.gnome.org/pub/GNOME/sources/glib
+
+# LIBGLIB_MVERSION="2.44"
+LIBGLIB_MVERSION="2.51" # 2016-10-24
+LIBGLIB_VERSION="${LIBGLIB_MVERSION}.0"
+
 LIBGLIB_FOLDER="glib-${LIBGLIB_VERSION}"
 LIBGLIB_ARCHIVE="${LIBGLIB_FOLDER}.tar.xz"
 LIBGLIB_URL="http://ftp.gnome.org/pub/GNOME/sources/glib/${LIBGLIB_MVERSION}/${LIBGLIB_ARCHIVE}"
@@ -293,10 +312,13 @@ LIBGLIB_URL="http://ftp.gnome.org/pub/GNOME/sources/glib/${LIBGLIB_MVERSION}/${L
 # http://www.pixman.org
 # http://cairographics.org/releases/
 
-LIBPIXMAN_VERSION="0.32.6"
+# LIBPIXMAN_VERSION="0.32.6"
+LIBPIXMAN_VERSION="0.34.0" # 2016-01-31
+
 LIBPIXMAN_FOLDER="pixman-${LIBPIXMAN_VERSION}"
 LIBPIXMAN_ARCHIVE="${LIBPIXMAN_FOLDER}.tar.gz"
 LIBPIXMAN_URL="http://cairographics.org/releases/${LIBPIXMAN_ARCHIVE}"
+
 
 # ----- Process actions. -----
 
@@ -319,6 +341,7 @@ then
   rm -rf "${WORK_FOLDER}/${LIBFFI_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBICONV_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBGETTEXT_FOLDER}"
+  rm -rf "${WORK_FOLDER}/${LIBPCRE_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBGLIB_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBSDL_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBSDL_IMAGE_FOLDER}"
@@ -541,7 +564,6 @@ fi
 
 do_host_get_git_head
 
-
 # ----- Get current date. -----
 
 do_host_get_current_date
@@ -554,6 +576,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBZ_ARCHIVE}\"..."
   curl -L "${LIBZ_URL}" --output "${LIBZ_ARCHIVE}"
 fi
 
@@ -567,6 +590,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBPNG_ARCHIVE}\"..."
   curl -L "${LIBPNG_URL}" --output "${LIBPNG_ARCHIVE}"
 fi
 
@@ -588,6 +612,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBJPG_ARCHIVE}\"..."
   curl -L "${LIBJPG_URL}" --output "${LIBJPG_ARCHIVE}"
 fi
 
@@ -609,6 +634,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBSDL_ARCHIVE}\"..."
   curl -L "${LIBSDL_URL}" --output "${LIBSDL_ARCHIVE}"
 fi
 
@@ -635,6 +661,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBSDL_IMAGE_ARCHIVE}\"..."
   curl -L "${LIBSDL_IMAGE_URL}" --output "${LIBSDL_IMAGE_ARCHIVE}"
 fi
 
@@ -647,7 +674,7 @@ then
   cd "${WORK_FOLDER}/${LIBSDL_IMAGE_FOLDER}"
 
   echo
-  echo "applying patch sdl-image-${LIBSDL_IMAGE_VERSION}-setjmp.patch..."
+  echo "Applying patch sdl-image-${LIBSDL_IMAGE_VERSION}-setjmp.patch..."
   patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-image-${LIBSDL_IMAGE_VERSION}-setjmp.patch"
 
 fi
@@ -660,6 +687,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBFFI_ARCHIVE}\"..."
   curl -L "${LIBFFI_URL}" --output "${LIBFFI_ARCHIVE}"
 fi
 
@@ -678,6 +706,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBICONV_ARCHIVE}\"..."
   curl -L "${LIBICONV_URL}" --output "${LIBICONV_ARCHIVE}"
 fi
 
@@ -696,6 +725,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBGETTEXT_ARCHIVE}\"..."
   curl -L "${LIBGETTEXT_URL}" --output "${LIBGETTEXT_ARCHIVE}"
 fi
 
@@ -706,6 +736,30 @@ then
   tar -xvf "${DOWNLOAD_FOLDER}/${LIBGETTEXT_ARCHIVE}"
 fi
 
+# ----- Get the PCRE library. -----
+
+if false
+then
+
+# Download the GLIB library.
+if [ ! -f "${DOWNLOAD_FOLDER}/${LIBPCRE_ARCHIVE}" ]
+then
+  mkdir -p "${DOWNLOAD_FOLDER}"
+
+  cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBPCRE_ARCHIVE}\"..."
+  curl -L "${LIBPCRE_URL}" --output "${LIBPCRE_ARCHIVE}"
+fi
+
+# Unpack the PCRE library.
+if [ ! -d "${WORK_FOLDER}/${LIBPCRE_FOLDER}" ]
+then
+  cd "${WORK_FOLDER}"
+  tar -xvf "${DOWNLOAD_FOLDER}/${LIBPCRE_ARCHIVE}"
+fi
+
+fi
+
 # ----- Get the GLIB library. -----
 
 # Download the GLIB library.
@@ -714,6 +768,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBGLIB_ARCHIVE}\"..."
   curl -L "${LIBGLIB_URL}" --output "${LIBGLIB_ARCHIVE}"
 fi
 
@@ -732,6 +787,7 @@ then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBPIXMAN_ARCHIVE}\"..."
   curl -L "${LIBPIXMAN_URL}" --output "${LIBPIXMAN_ARCHIVE}"
 fi
 
@@ -801,6 +857,7 @@ LIBSDL_IMAGE_ARCHIVE="${LIBSDL_IMAGE_ARCHIVE}"
 LIBFFI_FOLDER="${LIBFFI_FOLDER}"
 LIBICONV_FOLDER="${LIBICONV_FOLDER}"
 LIBGETTEXT_FOLDER="${LIBGETTEXT_FOLDER}"
+LIBPCRE_FOLDER="${LIBPCRE_FOLDER}"
 LIBGLIB_FOLDER="${LIBGLIB_FOLDER}"
 
 LIBPIXMAN_FOLDER="${LIBPIXMAN_FOLDER}"
@@ -813,20 +870,21 @@ EOF
 if [ "$HOST_DISTRO_NAME" == "Darwin" ]
 then
 
-set +u
-if [ ! -z ${MACPORTS_FOLDER} ]
-then
-  echo MACPORTS_FOLDER="${MACPORTS_FOLDER}" >> "${script_file}"
-fi
-set -u
+  set +u
+  if [ ! -z ${MACPORTS_FOLDER} ]
+  then
+    echo MACPORTS_FOLDER="${MACPORTS_FOLDER}" >> "${script_file}"
+  fi
+  set -u
 
-# Note: EOF is not quoted to allow local substitutions.
-cat <<EOF >> "${script_file}"
+  # Note: EOF is not quoted to allow local substitutions.
+  cat <<EOF >> "${script_file}"
 
 X11_FOLDER="${X11_FOLDER}"
 GETTEXT_FOLDER="${GETTEXT_FOLDER}"
 
 EOF
+# The above marker must start in the first column.
 
 fi
 
@@ -981,6 +1039,8 @@ if [ "${target_name}" == "debian" ]
 then
   echo "Checking patchelf..."
   patchelf --version
+
+  apt-get -y install libmount-dev
 fi
 
 if [ "${target_name}" == "osx" ]
@@ -1561,6 +1621,74 @@ fi
 
 fi
 
+# ----- Build and install the PCRE library. -----
+
+if false
+then
+
+if [ ! -f "${install_folder}/lib/libpcre.a" ]
+then
+
+  rm -rf "${build_folder}/${LIBPCRE_FOLDER}"
+  mkdir -p "${build_folder}/${LIBPCRE_FOLDER}"
+
+  mkdir -p "${install_folder}"
+
+  echo
+  echo "Running libpcre configure..."
+
+  cd "${build_folder}/${LIBPCRE_FOLDER}"
+
+  if [ "${target_name}" == "win" ]
+  then
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
+    LDFLAGS="-L${install_folder}/lib" \
+    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
+    \
+    bash "${work_folder}/${LIBPCRE_FOLDER}/configure" \
+      --host="${cross_compile_prefix}" \
+      --prefix="${install_folder}" \
+      --enable-unicode-properties \
+      --enable-utf
+
+  elif [ "${target_name}" == "debian" ]
+  then
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
+    LDFLAGS="-L${install_folder}/lib" \
+    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
+    \
+    bash "${work_folder}/${LIBPCRE_FOLDER}/configure" \
+      --prefix="${install_folder}" \
+      --enable-unicode-properties \
+      --enable-utf
+
+  elif [ "${target_name}" == "osx" ]
+  then
+    # To find libintl, add explicit paths.
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
+    LDFLAGS="-L${install_folder}/lib" \
+    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
+    \
+    bash "${work_folder}/${LIBPCRE_FOLDER}/configure" \
+      --prefix="${install_folder}" \
+      --enable-unicode-properties \
+      --enable-utf
+
+  fi
+
+  echo
+  echo "Running libpcre make install..."
+
+  # Build.
+  make clean install
+
+fi
+
+fi
+
 # ----- Build and install the GLIB library. -----
 
 if [ ! -f "${install_folder}/lib/libglib-2.0.la" ]
@@ -1585,7 +1713,8 @@ then
     \
     bash "${work_folder}/${LIBGLIB_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
-      --prefix="${install_folder}"
+      --prefix="${install_folder}" \
+      --without-pcre 
 
   elif [ "${target_name}" == "debian" ]
   then
@@ -1595,7 +1724,8 @@ then
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
     bash "${work_folder}/${LIBGLIB_FOLDER}/configure" \
-      --prefix="${install_folder}"
+      --prefix="${install_folder}" \
+      --without-pcre 
 
   elif [ "${target_name}" == "osx" ]
   then
@@ -1606,7 +1736,8 @@ then
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
     bash "${work_folder}/${LIBGLIB_FOLDER}/configure" \
-      --prefix="${install_folder}"
+      --prefix="${install_folder}" \
+      --without-pcre 
 
   fi
 
@@ -1981,6 +2112,7 @@ then
   do_container_mac_check_lib
 
   do_container_mac_copy_built_lib libglib-2.0.0.dylib
+  # do_container_mac_change_built_lib libpcre.1.dylib
   do_container_mac_change_built_lib libiconv.2.dylib
   do_container_mac_change_built_lib libintl.8.dylib
   do_container_mac_check_lib
@@ -1989,7 +2121,11 @@ then
   do_container_mac_change_built_lib libglib-2.0.0.dylib
   do_container_mac_change_built_lib libiconv.2.dylib
   do_container_mac_change_built_lib libintl.8.dylib
+  # do_container_mac_change_built_lib libpcre.1.dylib
   do_container_mac_check_lib
+
+  # do_container_mac_copy_built_lib libpcre.1.dylib
+  # do_container_mac_check_lib
 
   do_container_mac_copy_built_lib libz.1.dylib
   do_container_mac_check_lib
@@ -2135,6 +2271,8 @@ then
     --target-bits 32 \
     --docker-image "ilegeul/debian32:8-gnuarm-gcc-x11-v4"
 fi
+
+echo "4|$@|"
 
 # ---- Prevent script break because of not found MD5 file without arguments ----
 mkdir -p ${WORK_FOLDER}/output
