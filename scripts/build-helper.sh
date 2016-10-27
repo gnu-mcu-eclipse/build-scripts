@@ -97,22 +97,18 @@ do_host_prepare_prerequisites() {
       then
         caffeinate="caffeinate"
 
+        local hb_folder="$HOME/opt/homebrew-gae"
         # Experimental support for custom Homebrew; 
-        # not great, it requires MacTex and XQuartz.
-        if [ -d "$HOME/opt/homebrew-gae" ]
+        # not great, it still requires MacTex and XQuartz.
+        if [ -d "${hb_folder}" ]
         then
-          # A small kludge to access the keg-only tools.
-          # Requires updates if the version changes.
-          PATH="$HOME/opt/homebrew-gae/Cellar/texinfo/6.3/bin":$PATH
-          PATH="$HOME/opt/homebrew-gae/Cellar/gettext/0.19.8.1/bin":$PATH
-          PATH="$HOME/opt/homebrew-gae/bin":$PATH
+
+          PATH="${hb_folder}/bin":$PATH
+          # The TeX path is separate.
           PATH="/Library/TeX/texbin":$PATH
           export PATH
 
-          X11_FOLDER="/opt/X11"
-          GETTEXT_FOLDER="$HOME/opt/homebrew-gae/opt/gettext"
-
-          echo "Checking Homebrew in '$HOME/opt/homebrew-gae'..."
+          echo "Checking Homebrew in '${hb_folder}'..."
           set +e
           brew --version
           if [ $? != 0 ]
@@ -121,6 +117,8 @@ do_host_prepare_prerequisites() {
             exit 1
           fi
           set -e
+
+          X11_FOLDER="/opt/X11"
 
         else
 
@@ -154,7 +152,6 @@ do_host_prepare_prerequisites() {
           set -e
 
           X11_FOLDER="${MACPORTS_FOLDER}"
-          GETTEXT_FOLDER="${MACPORTS_FOLDER}"
         fi
       fi
 
