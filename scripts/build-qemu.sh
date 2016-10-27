@@ -881,7 +881,6 @@ then
   cat <<EOF >> "${script_file}"
 
 X11_FOLDER="${X11_FOLDER}"
-GETTEXT_FOLDER="${GETTEXT_FOLDER}"
 
 EOF
 # The above marker must start in the first column.
@@ -1730,8 +1729,8 @@ then
   elif [ "${target_name}" == "osx" ]
   then
     # To find libintl, add explicit paths.
-    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include -I${GETTEXT_FOLDER}/include" \
-    LDFLAGS="-L${install_folder}/lib -L${GETTEXT_FOLDER}/lib" \
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
+    LDFLAGS="-L${install_folder}/lib" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
@@ -2272,7 +2271,7 @@ then
     --docker-image "ilegeul/debian32:8-gnuarm-gcc-x11-v4"
 fi
 
-echo "4|$@|"
+# echo "4|$@|"
 
 # ---- Prevent script break because of not found MD5 file without arguments ----
 mkdir -p ${WORK_FOLDER}/output
