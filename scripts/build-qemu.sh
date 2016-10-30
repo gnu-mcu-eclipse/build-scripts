@@ -877,14 +877,6 @@ then
   fi
   set -u
 
-  # Note: EOF is not quoted to allow local substitutions.
-  cat <<EOF >> "${script_file}"
-
-X11_FOLDER="${X11_FOLDER}"
-
-EOF
-# The above marker must start in the first column.
-
 fi
 
 # Propagate DEBUG to guest.
@@ -1272,14 +1264,15 @@ then
   elif [ "${target_name}" == "osx" ]
   then
 
-    # The system does not longer provide X11 support, so use MacPorts
+    # On macOS disable X11 support.
     CFLAGS="-m${target_bits} -pipe -Wno-deprecated-declarations" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
     bash "${work_folder}/${LIBSDL_FOLDER}/configure" \
       --prefix="${install_folder}" \
-      --x-includes="${X11_FOLDER}/include"
+      \
+      --without-x 
 
   fi
 
@@ -1588,7 +1581,6 @@ then
   elif [ "${target_name}" == "osx" ]
   then
 
-    # The system does not longer provide X11 support, so use MacPorts
     CFLAGS="-m${target_bits} -pipe" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
@@ -1874,9 +1866,9 @@ then
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
     bash "${git_folder}/configure" \
-      --extra-cflags="-g -pipe -I${install_folder}/include -I${X11_FOLDER}/include -Wno-missing-format-attribute" \
+      --extra-cflags="-g -pipe -I${install_folder}/include -Wno-missing-format-attribute" \
       --disable-werror \
-      --extra-ldflags="-v -L${install_folder}/lib -L${X11_FOLDER}/lib -lX11" \
+      --extra-ldflags="-v -L${install_folder}/lib" \
       --target-list="gnuarmeclipse-softmmu" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
@@ -2075,7 +2067,6 @@ then
   do_container_mac_change_built_lib libz.1.dylib
   do_container_mac_change_built_lib libSDL-1.2.0.dylib
   do_container_mac_change_built_lib libSDL_image-1.2.0.dylib
-  do_container_mac_change_lib libX11.6.dylib "${X11_FOLDER}/lib"
   do_container_mac_change_built_lib libgthread-2.0.0.dylib
   do_container_mac_change_built_lib libglib-2.0.0.dylib
   do_container_mac_change_built_lib libintl.8.dylib
@@ -2131,25 +2122,6 @@ then
 
   do_container_mac_copy_built_lib libpixman-1.0.dylib  
   do_container_mac_check_lib
-
-  do_container_mac_copy_lib libX11.6.dylib "${X11_FOLDER}/lib"
-  do_container_mac_change_lib libxcb.1.dylib "${X11_FOLDER}/lib"
-  do_container_mac_change_lib libXau.6.dylib "${X11_FOLDER}/lib"
-  do_container_mac_change_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
-  do_container_mac_check_lib
-
-  do_container_mac_copy_lib libxcb.1.dylib "${X11_FOLDER}/lib"
-  do_container_mac_change_lib libXau.6.dylib "${X11_FOLDER}/lib"
-  do_container_mac_change_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
-  do_container_mac_check_lib
-
-  do_container_mac_copy_lib libXau.6.dylib "${X11_FOLDER}/lib"
-  do_container_mac_check_lib
-
-  do_container_mac_copy_lib libXdmcp.6.dylib "${X11_FOLDER}/lib"
-  do_container_mac_check_lib
-
-  # Do not strip resulting dylib files!
 
 fi
 
