@@ -242,22 +242,22 @@ LIBJPG_URL="http://www.ijg.org/files/${LIBJPG_ARCHIVE}"
 # https://www.libsdl.org/download-1.2.php
 # https://www.libsdl.org/release
 
-LIBSDL_VERSION="1.2.15" # 2013-08-17
+LIBSDL1_VERSION="1.2.15" # 2013-08-17
 
-LIBSDL_FOLDER="SDL-${LIBSDL_VERSION}"
-LIBSDL_ARCHIVE="${LIBSDL_FOLDER}.tar.gz"
-LIBSDL_URL="https://www.libsdl.org/release/${LIBSDL_ARCHIVE}"
+LIBSDL1_FOLDER="SDL-${LIBSDL1_VERSION}"
+LIBSDL1_ARCHIVE="${LIBSDL1_FOLDER}.tar.gz"
+LIBSDL1_URL="https://www.libsdl.org/release/${LIBSDL1_ARCHIVE}"
 
 
 # https://www.libsdl.org/projects/SDL_image/release-1.2.html
 # https://www.libsdl.org/projects/SDL_image/release
 
 # Revert to 1.2.10 due to OS X El Capitan glitches.
-LIBSDL_IMAGE_VERSION="1.2.10" # 2013-08-17
+LIBSDL1_IMAGE_VERSION="1.2.10" # 2013-08-17
 
-LIBSDL_IMAGE_FOLDER="SDL_image-${LIBSDL_IMAGE_VERSION}"
-LIBSDL_IMAGE_ARCHIVE="${LIBSDL_IMAGE_FOLDER}.tar.gz"
-LIBSDL_IMAGE_URL="https://www.libsdl.org/projects/SDL_image/release/${LIBSDL_IMAGE_ARCHIVE}"
+LIBSDL1_IMAGE_FOLDER="SDL_image-${LIBSDL1_IMAGE_VERSION}"
+LIBSDL1_IMAGE_ARCHIVE="${LIBSDL1_IMAGE_FOLDER}.tar.gz"
+LIBSDL1_IMAGE_URL="https://www.libsdl.org/projects/SDL_image/release/${LIBSDL1_IMAGE_ARCHIVE}"
 
 
 # ftp://sourceware.org/pub/libffi
@@ -343,8 +343,8 @@ then
   rm -rf "${WORK_FOLDER}/${LIBGETTEXT_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBPCRE_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBGLIB_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBSDL_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBSDL_IMAGE_FOLDER}"
+  rm -rf "${WORK_FOLDER}/${LIBSDL1_FOLDER}"
+  rm -rf "${WORK_FOLDER}/${LIBSDL1_IMAGE_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBPIXMAN_FOLDER}"
 
   rm -rf "${WORK_FOLDER}/scripts"
@@ -629,53 +629,53 @@ fi
 # ----- Get the SDL libraries. -----
 
 # Download the SDL library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL1_ARCHIVE}" ]
 then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
-  echo "Downloading \"${LIBSDL_ARCHIVE}\"..."
-  curl -L "${LIBSDL_URL}" --output "${LIBSDL_ARCHIVE}"
+  echo "Downloading \"${LIBSDL1_ARCHIVE}\"..."
+  curl -L "${LIBSDL1_URL}" --output "${LIBSDL1_ARCHIVE}"
 fi
 
 # Unpack the SDL library.
-if [ ! -d "${WORK_FOLDER}/${LIBSDL_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER}/${LIBSDL1_FOLDER}" ]
 then
   cd "${WORK_FOLDER}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL_ARCHIVE}"
+  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL1_ARCHIVE}"
 
-  cd "${WORK_FOLDER}/${LIBSDL_FOLDER}"
-
-  echo
-  echo "applying patch sdl-${LIBSDL_VERSION}-no-CGDirectPaletteRef.patch..."
-  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-${LIBSDL_VERSION}-no-CGDirectPaletteRef.patch"
+  cd "${WORK_FOLDER}/${LIBSDL1_FOLDER}"
 
   echo
-  echo "applying patch ssdl-${LIBSDL_VERSION}-x11.patch..."
-  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-${LIBSDL_VERSION}-x11.patch"
+  echo "applying patch sdl-${LIBSDL1_VERSION}-no-CGDirectPaletteRef.patch..."
+  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-${LIBSDL1_VERSION}-no-CGDirectPaletteRef.patch"
+
+  echo
+  echo "applying patch ssdl-${LIBSDL1_VERSION}-x11.patch..."
+  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-${LIBSDL1_VERSION}-x11.patch"
 fi
 
 # Download the SDL_image library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL_IMAGE_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL1_IMAGE_ARCHIVE}" ]
 then
   mkdir -p "${DOWNLOAD_FOLDER}"
 
   cd "${DOWNLOAD_FOLDER}"
-  echo "Downloading \"${LIBSDL_IMAGE_ARCHIVE}\"..."
-  curl -L "${LIBSDL_IMAGE_URL}" --output "${LIBSDL_IMAGE_ARCHIVE}"
+  echo "Downloading \"${LIBSDL1_IMAGE_ARCHIVE}\"..."
+  curl -L "${LIBSDL1_IMAGE_URL}" --output "${LIBSDL1_IMAGE_ARCHIVE}"
 fi
 
 # Unpack the SDL_image library.
-if [ ! -d "${WORK_FOLDER}/${LIBSDL_IMAGE_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER}/${LIBSDL1_IMAGE_FOLDER}" ]
 then
   cd "${WORK_FOLDER}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL_IMAGE_ARCHIVE}"
+  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL1_IMAGE_ARCHIVE}"
 
-  cd "${WORK_FOLDER}/${LIBSDL_IMAGE_FOLDER}"
+  cd "${WORK_FOLDER}/${LIBSDL1_IMAGE_FOLDER}"
 
   echo
-  echo "Applying patch sdl-image-${LIBSDL_IMAGE_VERSION}-setjmp.patch..."
-  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-image-${LIBSDL_IMAGE_VERSION}-setjmp.patch"
+  echo "Applying patch sdl-image-${LIBSDL1_IMAGE_VERSION}-setjmp.patch..."
+  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-image-${LIBSDL1_IMAGE_VERSION}-setjmp.patch"
 
 fi
 
@@ -849,10 +849,10 @@ LIBZ_ARCHIVE="${LIBZ_ARCHIVE}"
 
 LIBPNG_FOLDER="${LIBPNG_FOLDER}"
 LIBJPG_FOLDER="${LIBJPG_FOLDER}"
-LIBSDL_FOLDER="${LIBSDL_FOLDER}"
+LIBSDL1_FOLDER="${LIBSDL1_FOLDER}"
 
-LIBSDL_IMAGE_FOLDER="${LIBSDL_IMAGE_FOLDER}"
-LIBSDL_IMAGE_ARCHIVE="${LIBSDL_IMAGE_ARCHIVE}"
+LIBSDL1_IMAGE_FOLDER="${LIBSDL1_IMAGE_FOLDER}"
+LIBSDL1_IMAGE_ARCHIVE="${LIBSDL1_IMAGE_ARCHIVE}"
 
 LIBFFI_FOLDER="${LIBFFI_FOLDER}"
 LIBICONV_FOLDER="${LIBICONV_FOLDER}"
@@ -1225,20 +1225,20 @@ then
 
 fi
 
-# ----- Build and install the SDL library. -----
+# ----- Build and install the SDL 1.x library. -----
 
 if [ ! -f "${install_folder}/lib/libSDL.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBSDL_FOLDER}"
-  mkdir -p "${build_folder}/${LIBSDL_FOLDER}"
+  rm -rf "${build_folder}/${LIBSDL1_FOLDER}"
+  mkdir -p "${build_folder}/${LIBSDL1_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
-  echo "Running libSDL configure..."
+  echo "Running libSDL 1.x configure..."
 
-  cd "${build_folder}/${LIBSDL_FOLDER}"
+  cd "${build_folder}/${LIBSDL1_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
@@ -1246,7 +1246,7 @@ then
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL_FOLDER}/configure" \
+    bash "${work_folder}/${LIBSDL1_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" \
       \
@@ -1258,7 +1258,7 @@ then
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL_FOLDER}/configure" \
+    bash "${work_folder}/${LIBSDL1_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   elif [ "${target_name}" == "osx" ]
@@ -1269,7 +1269,7 @@ then
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL_FOLDER}/configure" \
+    bash "${work_folder}/${LIBSDL1_FOLDER}/configure" \
       --prefix="${install_folder}" \
       \
       --without-x 
@@ -1277,7 +1277,7 @@ then
   fi
 
   echo
-  echo "Running libSDL make install..."
+  echo "Running libSDL 1.x make install..."
 
   # Build.
   make clean install
@@ -1287,15 +1287,15 @@ fi
 if [ ! -f "${install_folder}/lib/libSDL_image.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBSDL_IMAGE_FOLDER}"
-  mkdir -p "${build_folder}/${LIBSDL_IMAGE_FOLDER}"
+  rm -rf "${build_folder}/${LIBSDL1_IMAGE_FOLDER}"
+  mkdir -p "${build_folder}/${LIBSDL1_IMAGE_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
-  echo "Running libSDL_image configure..."
+  echo "Running libSDL_image 1.x configure..."
 
-  cd "${build_folder}/${LIBSDL_IMAGE_FOLDER}"
+  cd "${build_folder}/${LIBSDL1_IMAGE_FOLDER}"
 
   # The explicit folders are needed to find jpeg, pkg-config not used for it.
   if [ "${target_name}" == "win" ]
@@ -1306,7 +1306,7 @@ then
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL_IMAGE_FOLDER}/configure" \
+    bash "${work_folder}/${LIBSDL1_IMAGE_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" \
       --with-gnu-ld \
@@ -1337,7 +1337,7 @@ then
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL_IMAGE_FOLDER}/configure" \
+    bash "${work_folder}/${LIBSDL1_IMAGE_FOLDER}/configure" \
       --prefix="${install_folder}" \
       --with-gnu-ld \
       \
@@ -1367,7 +1367,7 @@ then
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL_IMAGE_FOLDER}/configure" \
+    bash "${work_folder}/${LIBSDL1_IMAGE_FOLDER}/configure" \
       --prefix="${install_folder}" \
       \
       --enable-jpg \
@@ -1391,7 +1391,7 @@ then
   fi
 
   echo
-  echo "Running libSDL_image make install..."
+  echo "Running libSDL_image 1.x make install..."
 
   # Build.
   make clean install
@@ -2141,8 +2141,8 @@ do_container_copy_license "${work_folder}/${LIBGETTEXT_FOLDER}" "${LIBGETTEXT_FO
 do_container_copy_license "${work_folder}/${LIBGLIB_FOLDER}" "${LIBGLIB_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBPNG_FOLDER}" "${LIBPNG_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBJPG_FOLDER}" "${LIBJPG_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBSDL_FOLDER}" "${LIBSDL_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBSDL_IMAGE_FOLDER}" "${LIBSDL_IMAGE_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBSDL1_FOLDER}" "${LIBSDL1_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBSDL1_IMAGE_FOLDER}" "${LIBSDL1_IMAGE_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBFFI_FOLDER}" "${LIBFFI_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBZ_FOLDER}" "${LIBZ_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBPIXMAN_FOLDER}" "${LIBPIXMAN_FOLDER}"
