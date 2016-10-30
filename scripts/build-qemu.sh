@@ -239,7 +239,7 @@ LIBJPG_ARCHIVE="jpegsrc.v${LIBJPG_VERSION}.tar.gz"
 LIBJPG_URL="http://www.ijg.org/files/${LIBJPG_ARCHIVE}"
 
 
-# https://www.libsdl.org/download-1.2.php
+# https://www.libsdl.org/
 # https://www.libsdl.org/release
 
 LIBSDL1_VERSION="1.2.15" # 2013-08-17
@@ -249,7 +249,7 @@ LIBSDL1_ARCHIVE="${LIBSDL1_FOLDER}.tar.gz"
 LIBSDL1_URL="https://www.libsdl.org/release/${LIBSDL1_ARCHIVE}"
 
 
-# https://www.libsdl.org/projects/SDL_image/release-1.2.html
+# https://www.libsdl.org/projects/SDL_image/
 # https://www.libsdl.org/projects/SDL_image/release
 
 # Revert to 1.2.10 due to OS X El Capitan glitches.
@@ -258,6 +258,25 @@ LIBSDL1_IMAGE_VERSION="1.2.10" # 2013-08-17
 LIBSDL1_IMAGE_FOLDER="SDL_image-${LIBSDL1_IMAGE_VERSION}"
 LIBSDL1_IMAGE_ARCHIVE="${LIBSDL1_IMAGE_FOLDER}.tar.gz"
 LIBSDL1_IMAGE_URL="https://www.libsdl.org/projects/SDL_image/release/${LIBSDL1_IMAGE_ARCHIVE}"
+
+
+# https://www.libsdl.org/release
+
+LIBSDL2_VERSION="2.0.5" # 2016-10-20
+
+LIBSDL2_FOLDER="SDL2-${LIBSDL2_VERSION}"
+LIBSDL2_ARCHIVE="${LIBSDL2_FOLDER}.tar.gz"
+LIBSDL2_URL="https://www.libsdl.org/release/${LIBSDL2_ARCHIVE}"
+
+
+# https://www.libsdl.org/projects/SDL_image/
+# https://www.libsdl.org/projects/SDL_image/release
+
+LIBSDL2_IMAGE_VERSION="2.0.1" # 2016-01-03
+
+LIBSDL2_IMAGE_FOLDER="SDL2_image-${LIBSDL2_IMAGE_VERSION}"
+LIBSDL2_IMAGE_ARCHIVE="${LIBSDL2_IMAGE_FOLDER}.tar.gz"
+LIBSDL2_IMAGE_URL="https://www.libsdl.org/projects/SDL_image/release/${LIBSDL2_IMAGE_ARCHIVE}"
 
 
 # ftp://sourceware.org/pub/libffi
@@ -626,9 +645,9 @@ then
   #patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/xxx.patch"
 fi
 
-# ----- Get the SDL libraries. -----
+# ----- Get the SDL 1.x libraries. -----
 
-# Download the SDL library.
+# Download the SDL 1.x library.
 if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL1_ARCHIVE}" ]
 then
   mkdir -p "${DOWNLOAD_FOLDER}"
@@ -638,7 +657,7 @@ then
   curl -L "${LIBSDL1_URL}" --output "${LIBSDL1_ARCHIVE}"
 fi
 
-# Unpack the SDL library.
+# Unpack the SDL 1.x library.
 if [ ! -d "${WORK_FOLDER}/${LIBSDL1_FOLDER}" ]
 then
   cd "${WORK_FOLDER}"
@@ -655,7 +674,7 @@ then
   patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-${LIBSDL1_VERSION}-x11.patch"
 fi
 
-# Download the SDL_image library.
+# Download the SDL_image 1.x library.
 if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL1_IMAGE_ARCHIVE}" ]
 then
   mkdir -p "${DOWNLOAD_FOLDER}"
@@ -665,7 +684,7 @@ then
   curl -L "${LIBSDL1_IMAGE_URL}" --output "${LIBSDL1_IMAGE_ARCHIVE}"
 fi
 
-# Unpack the SDL_image library.
+# Unpack the SDL_image 1.x library.
 if [ ! -d "${WORK_FOLDER}/${LIBSDL1_IMAGE_FOLDER}" ]
 then
   cd "${WORK_FOLDER}"
@@ -677,6 +696,48 @@ then
   echo "Applying patch sdl-image-${LIBSDL1_IMAGE_VERSION}-setjmp.patch..."
   patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-image-${LIBSDL1_IMAGE_VERSION}-setjmp.patch"
 
+fi
+
+# ----- Get the SDL 2.x libraries. -----
+
+# Download the SDL 2.x library.
+if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL2_ARCHIVE}" ]
+then
+  mkdir -p "${DOWNLOAD_FOLDER}"
+
+  cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBSDL2_ARCHIVE}\"..."
+  curl -L "${LIBSDL2_URL}" --output "${LIBSDL2_ARCHIVE}"
+fi
+
+# Unpack the SDL 2.x library.
+if [ ! -d "${WORK_FOLDER}/${LIBSDL2_FOLDER}" ]
+then
+  cd "${WORK_FOLDER}"
+  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL2_ARCHIVE}"
+
+  cd "${WORK_FOLDER}/${LIBSDL2_FOLDER}"
+  # Add patches here, if needed.
+fi
+
+# Download the SDL_image 2.x library.
+if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL2_IMAGE_ARCHIVE}" ]
+then
+  mkdir -p "${DOWNLOAD_FOLDER}"
+
+  cd "${DOWNLOAD_FOLDER}"
+  echo "Downloading \"${LIBSDL2_IMAGE_ARCHIVE}\"..."
+  curl -L "${LIBSDL2_IMAGE_URL}" --output "${LIBSDL2_IMAGE_ARCHIVE}"
+fi
+
+# Unpack the SDL_image 2.x library.
+if [ ! -d "${WORK_FOLDER}/${LIBSDL2_IMAGE_FOLDER}" ]
+then
+  cd "${WORK_FOLDER}"
+  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL2_IMAGE_ARCHIVE}"
+
+  cd "${WORK_FOLDER}/${LIBSDL2_IMAGE_FOLDER}"
+  # Add patches here, if needed.
 fi
 
 # ----- Get the FFI library. -----
@@ -853,6 +914,11 @@ LIBSDL1_FOLDER="${LIBSDL1_FOLDER}"
 
 LIBSDL1_IMAGE_FOLDER="${LIBSDL1_IMAGE_FOLDER}"
 LIBSDL1_IMAGE_ARCHIVE="${LIBSDL1_IMAGE_ARCHIVE}"
+
+LIBSDL2_FOLDER="${LIBSDL2_FOLDER}"
+
+LIBSDL2_IMAGE_FOLDER="${LIBSDL2_IMAGE_FOLDER}"
+LIBSDL2_IMAGE_ARCHIVE="${LIBSDL2_IMAGE_ARCHIVE}"
 
 LIBFFI_FOLDER="${LIBFFI_FOLDER}"
 LIBICONV_FOLDER="${LIBICONV_FOLDER}"
@@ -1263,7 +1329,6 @@ then
 
   elif [ "${target_name}" == "osx" ]
   then
-
     # On macOS disable X11 support.
     CFLAGS="-m${target_bits} -pipe -Wno-deprecated-declarations" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
@@ -1392,6 +1457,175 @@ then
 
   echo
   echo "Running libSDL_image 1.x make install..."
+
+  # Build.
+  make clean install
+fi
+
+# ----- Build and install the SDL 2.x library. -----
+
+if [ ! -f "${install_folder}/lib/libSDL2.a" ]
+then
+
+  rm -rf "${build_folder}/${LIBSDL2_FOLDER}"
+  mkdir -p "${build_folder}/${LIBSDL2_FOLDER}"
+
+  mkdir -p "${install_folder}"
+
+  echo
+  echo "Running libSDL 2.x configure..."
+
+  cd "${build_folder}/${LIBSDL2_FOLDER}"
+
+  if [ "${target_name}" == "win" ]
+  then
+    CFLAGS="-m${target_bits} -pipe" \
+    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
+    \
+    bash "${work_folder}/${LIBSDL2_FOLDER}/configure" \
+      --host="${cross_compile_prefix}" \
+      --prefix="${install_folder}" 
+
+  elif [ "${target_name}" == "debian" ]
+  then
+    CFLAGS="-m${target_bits} -pipe" \
+    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
+    \
+    bash "${work_folder}/${LIBSDL2_FOLDER}/configure" \
+      --prefix="${install_folder}"
+
+  elif [ "${target_name}" == "osx" ]
+  then
+    # On macOS disable X11 support.
+    CFLAGS="-m${target_bits} -pipe -Wno-deprecated-declarations" \
+    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
+    \
+    bash "${work_folder}/${LIBSDL2_FOLDER}/configure" \
+      --prefix="${install_folder}" \
+      \
+      --without-x 
+
+  fi
+
+  echo
+  echo "Running libSDL 2.x make install..."
+
+  # Build.
+  make clean install
+
+fi
+
+if [ ! -f "${install_folder}/lib/libSDL2_image.a" ]
+then
+
+  rm -rf "${build_folder}/${LIBSDL2_IMAGE_FOLDER}"
+  mkdir -p "${build_folder}/${LIBSDL2_IMAGE_FOLDER}"
+
+  mkdir -p "${install_folder}"
+
+  echo
+  echo "Running libSDL_image 2.x configure..."
+
+  cd "${build_folder}/${LIBSDL2_IMAGE_FOLDER}"
+
+  # The explicit folders are needed to find jpeg, pkg-config not used for it.
+  if [ "${target_name}" == "win" ]
+  then
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
+    LDFLAGS="-L${install_folder}/lib" \
+    LIBS="-lpng16 -ljpeg" \
+    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
+    \
+    bash "${work_folder}/${LIBSDL2_IMAGE_FOLDER}/configure" \
+      --host="${cross_compile_prefix}" \
+      --prefix="${install_folder}" \
+      --with-gnu-ld \
+      \
+      --enable-jpg \
+      --disable-jpg-shared \
+      --enable-png \
+      --disable-png-shared \
+      --disable-bmp \
+      --disable-gif \
+      --disable-lbm \
+      --disable-pcx \
+      --disable-pnm \
+      --disable-tga \
+      --disable-tif \
+      --disable-tif-shared \
+      --disable-xcf \
+      --disable-xpm \
+      --disable-xv \
+      --disable-webp \
+      --disable-webp-shared
+
+  elif [ "${target_name}" == "debian" ]
+  then
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
+    LDFLAGS="-L${install_folder}/lib" \
+    LIBPNG_LIBS="-lpng16 -ljpeg" \
+    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
+    \
+    bash "${work_folder}/${LIBSDL2_IMAGE_FOLDER}/configure" \
+      --prefix="${install_folder}" \
+      --with-gnu-ld \
+      \
+      --enable-jpg \
+      --disable-jpg-shared \
+      --enable-png \
+      --disable-png-shared \
+      --disable-bmp \
+      --disable-gif \
+      --disable-lbm \
+      --disable-pcx \
+      --disable-pnm \
+      --disable-tga \
+      --disable-tif \
+      --disable-tif-shared \
+      --disable-xcf \
+      --disable-xpm \
+      --disable-xv \
+      --disable-webp \
+      --disable-webp-shared
+
+  elif [ "${target_name}" == "osx" ]
+  then
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
+    LDFLAGS="-L${install_folder}/lib" \
+    LIBS="-lpng16 -ljpeg" \
+    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
+    \
+    bash "${work_folder}/${LIBSDL2_IMAGE_FOLDER}/configure" \
+      --prefix="${install_folder}" \
+      \
+      --enable-jpg \
+      --disable-jpg-shared \
+      --enable-png \
+      --disable-png-shared \
+      --disable-bmp \
+      --disable-gif \
+      --disable-lbm \
+      --disable-pcx \
+      --disable-pnm \
+      --disable-tga \
+      --disable-tif \
+      --disable-tif-shared \
+      --disable-xcf \
+      --disable-xpm \
+      --disable-xv \
+      --disable-webp \
+      --disable-webp-shared
+
+  fi
+
+  echo
+  echo "Running libSDL_image 2.x make install..."
 
   # Build.
   make clean install
@@ -2019,6 +2253,10 @@ then
 
   do_container_linux_copy_user_so libSDL-1.2
   do_container_linux_copy_user_so libSDL_image-1.2
+
+  do_container_linux_copy_user_so libSDL2-2.0
+  do_container_linux_copy_user_so libSDL2_image-2.0
+ 
   do_container_linux_copy_user_so libpng16
 
   do_container_linux_copy_user_so libjpeg
@@ -2083,6 +2321,17 @@ then
   do_container_mac_change_built_lib libz.1.dylib
   do_container_mac_check_lib
 
+  do_container_mac_copy_built_lib libSDL2-2.0.0.dylib
+  do_container_mac_check_lib
+
+  do_container_mac_copy_built_lib libSDL2_image-2.0.0.dylib
+  do_container_mac_change_built_lib libSDL2-2.0.0.dylib
+  do_container_mac_change_built_lib libpng16.16.dylib
+  do_container_mac_change_built_lib libjpeg.9.dylib
+  do_container_mac_change_built_lib libz.1.dylib
+  do_container_mac_change_built_lib libiconv.2.dylib
+  do_container_mac_check_lib
+
   do_container_mac_copy_built_lib libpng16.16.dylib
   do_container_mac_change_built_lib libz.1.dylib
   do_container_mac_check_lib
@@ -2143,6 +2392,8 @@ do_container_copy_license "${work_folder}/${LIBPNG_FOLDER}" "${LIBPNG_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBJPG_FOLDER}" "${LIBJPG_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBSDL1_FOLDER}" "${LIBSDL1_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBSDL1_IMAGE_FOLDER}" "${LIBSDL1_IMAGE_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBSDL2_FOLDER}" "${LIBSDL2_FOLDER}"
+do_container_copy_license "${work_folder}/${LIBSDL2_IMAGE_FOLDER}" "${LIBSDL2_IMAGE_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBFFI_FOLDER}" "${LIBFFI_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBZ_FOLDER}" "${LIBZ_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBPIXMAN_FOLDER}" "${LIBPIXMAN_FOLDER}"
