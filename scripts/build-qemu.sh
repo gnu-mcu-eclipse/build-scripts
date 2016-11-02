@@ -238,16 +238,20 @@ LIBJPG_FOLDER="jpeg-${LIBJPG_VERSION}"
 LIBJPG_ARCHIVE="jpegsrc.v${LIBJPG_VERSION}.tar.gz"
 LIBJPG_URL="http://www.ijg.org/files/${LIBJPG_ARCHIVE}"
 
+LIBSDL_ABI=${LIBSDL_ABI:-"2.0"}
+# LIBSDL_ABI=${LIBSDL_ABI:-"1.2"}
 
 # https://www.libsdl.org/
 # https://www.libsdl.org/release
+
+if [ "${LIBSDL_ABI}" == "1.2" ]
+then
 
 LIBSDL1_VERSION="1.2.15" # 2013-08-17
 
 LIBSDL1_FOLDER="SDL-${LIBSDL1_VERSION}"
 LIBSDL1_ARCHIVE="${LIBSDL1_FOLDER}.tar.gz"
 LIBSDL1_URL="https://www.libsdl.org/release/${LIBSDL1_ARCHIVE}"
-
 
 # https://www.libsdl.org/projects/SDL_image/
 # https://www.libsdl.org/projects/SDL_image/release
@@ -259,6 +263,10 @@ LIBSDL1_IMAGE_FOLDER="SDL_image-${LIBSDL1_IMAGE_VERSION}"
 LIBSDL1_IMAGE_ARCHIVE="${LIBSDL1_IMAGE_FOLDER}.tar.gz"
 LIBSDL1_IMAGE_URL="https://www.libsdl.org/projects/SDL_image/release/${LIBSDL1_IMAGE_ARCHIVE}"
 
+fi
+
+if [ "${LIBSDL_ABI}" == "2.0" ]
+then
 
 # https://www.libsdl.org/release
 
@@ -268,7 +276,6 @@ LIBSDL2_FOLDER="SDL2-${LIBSDL2_VERSION}"
 LIBSDL2_ARCHIVE="${LIBSDL2_FOLDER}.tar.gz"
 LIBSDL2_URL="https://www.libsdl.org/release/${LIBSDL2_ARCHIVE}"
 
-
 # https://www.libsdl.org/projects/SDL_image/
 # https://www.libsdl.org/projects/SDL_image/release
 
@@ -277,6 +284,8 @@ LIBSDL2_IMAGE_VERSION="2.0.1" # 2016-01-03
 LIBSDL2_IMAGE_FOLDER="SDL2_image-${LIBSDL2_IMAGE_VERSION}"
 LIBSDL2_IMAGE_ARCHIVE="${LIBSDL2_IMAGE_FOLDER}.tar.gz"
 LIBSDL2_IMAGE_URL="https://www.libsdl.org/projects/SDL_image/release/${LIBSDL2_IMAGE_ARCHIVE}"
+
+fi
 
 
 # ftp://sourceware.org/pub/libffi
@@ -647,6 +656,9 @@ fi
 
 # ----- Get the SDL 1.x libraries. -----
 
+if [ "${LIBSDL_ABI}" == "1.2" ]
+then
+
 # Download the SDL 1.x library.
 if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL1_ARCHIVE}" ]
 then
@@ -698,6 +710,11 @@ then
 
 fi
 
+fi
+
+if [ "${LIBSDL_ABI}" == "2.0" ]
+then
+
 # ----- Get the SDL 2.x libraries. -----
 
 # Download the SDL 2.x library.
@@ -738,6 +755,8 @@ then
 
   cd "${WORK_FOLDER}/${LIBSDL2_IMAGE_FOLDER}"
   # Add patches here, if needed.
+fi
+
 fi
 
 # ----- Get the FFI library. -----
@@ -910,15 +929,34 @@ LIBZ_ARCHIVE="${LIBZ_ARCHIVE}"
 
 LIBPNG_FOLDER="${LIBPNG_FOLDER}"
 LIBJPG_FOLDER="${LIBJPG_FOLDER}"
-LIBSDL1_FOLDER="${LIBSDL1_FOLDER}"
 
-LIBSDL1_IMAGE_FOLDER="${LIBSDL1_IMAGE_FOLDER}"
-LIBSDL1_IMAGE_ARCHIVE="${LIBSDL1_IMAGE_ARCHIVE}"
+LIBSDL_ABI="${LIBSDL_ABI}"
 
-LIBSDL2_FOLDER="${LIBSDL2_FOLDER}"
+EOF
+# The above marker must start in the first column.
 
-LIBSDL2_IMAGE_FOLDER="${LIBSDL2_IMAGE_FOLDER}"
-LIBSDL2_IMAGE_ARCHIVE="${LIBSDL2_IMAGE_ARCHIVE}"
+if [ "${LIBSDL_ABI}" == "1.2" ]
+then
+
+  echo LIBSDL1_FOLDER="${LIBSDL1_FOLDER}" >> "${script_file}"
+  echo >> "${script_file}"
+  echo LIBSDL1_IMAGE_FOLDER="${LIBSDL1_IMAGE_FOLDER}" >> "${script_file}"
+  echo LIBSDL1_IMAGE_ARCHIVE="${LIBSDL1_IMAGE_ARCHIVE}" >> "${script_file}"
+
+fi
+
+if [ "${LIBSDL_ABI}" == "2.0" ]
+then
+
+  echo LIBSDL2_FOLDER="${LIBSDL2_FOLDER}" >> "${script_file}"
+  echo >> "${script_file}"
+  echo LIBSDL2_IMAGE_FOLDER="${LIBSDL2_IMAGE_FOLDER}" >> "${script_file}"
+  echo LIBSDL2_IMAGE_ARCHIVE="${LIBSDL2_IMAGE_ARCHIVE}" >> "${script_file}"
+
+fi
+
+# Note: EOF is not quoted to allow local substitutions.
+cat <<EOF >> "${script_file}"
 
 LIBFFI_FOLDER="${LIBFFI_FOLDER}"
 LIBICONV_FOLDER="${LIBICONV_FOLDER}"
@@ -1293,6 +1331,9 @@ fi
 
 # ----- Build and install the SDL 1.x library. -----
 
+if [ "${LIBSDL_ABI}" == "1.2" ]
+then
+
 if [ ! -f "${install_folder}/lib/libSDL.a" ]
 then
 
@@ -1462,6 +1503,11 @@ then
   make clean install
 fi
 
+fi
+
+if [ "${LIBSDL_ABI}" == "2.0" ]
+then
+
 # ----- Build and install the SDL 2.x library. -----
 
 if [ ! -f "${install_folder}/lib/libSDL2.a" ]
@@ -1629,6 +1675,8 @@ then
 
   # Build.
   make clean install
+fi
+
 fi
 
 # ----- Build and install the FFI library. -----
@@ -2068,6 +2116,8 @@ then
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
+      \
+      --with-sdlabi="${LIBSDL_ABI}" \
       | tee "${output_folder}/configure-output.txt"
 
   elif [ "${target_name}" == "debian" ]
@@ -2088,6 +2138,8 @@ then
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
+      \
+      --with-sdlabi="${LIBSDL_ABI}" \
     | tee "${output_folder}/configure-output.txt"
 
   elif [ "${target_name}" == "osx" ]
@@ -2108,6 +2160,8 @@ then
       --bindir="${install_folder}/${APP_LC_NAME}/bin" \
       --docdir="${install_folder}/${APP_LC_NAME}/doc" \
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
+      \
+      --with-sdlabi="${LIBSDL_ABI}" \
     | tee "${output_folder}/configure-output.txt"
 
     # Configure fails for --static
@@ -2251,12 +2305,20 @@ then
     distro_machine="i386"
   fi
 
-  do_container_linux_copy_user_so libSDL-1.2
-  do_container_linux_copy_user_so libSDL_image-1.2
+  if [ "${LIBSDL_ABI}" == "1.2" ]
+  then
 
-  do_container_linux_copy_user_so libSDL2-2.0
-  do_container_linux_copy_user_so libSDL2_image-2.0
+    do_container_linux_copy_user_so libSDL-1.2
+    do_container_linux_copy_user_so libSDL_image-1.2
+
+  elif [ "${LIBSDL_ABI}" == "2.0" ]
+  then
+
+    do_container_linux_copy_user_so libSDL2-2.0
+    do_container_linux_copy_user_so libSDL2_image-2.0
  
+  fi
+
   do_container_linux_copy_user_so libpng16
 
   do_container_linux_copy_user_so libjpeg
@@ -2303,34 +2365,55 @@ then
   # otool -L "${install_folder}/${APP_LC_NAME}/bin/qemu-system-gnuarmeclipse"
 
   do_container_mac_change_built_lib libz.1.dylib
-  do_container_mac_change_built_lib libSDL-1.2.0.dylib
-  do_container_mac_change_built_lib libSDL_image-1.2.0.dylib
+
+  if [ "${LIBSDL_ABI}" == "1.2" ]
+  then
+
+    do_container_mac_change_built_lib libSDL-1.2.0.dylib
+    do_container_mac_change_built_lib libSDL_image-1.2.0.dylib
+
+  elif [ "${LIBSDL_ABI}" == "2.0" ]
+  then
+
+    do_container_mac_change_built_lib libSDL2-2.0.0.dylib
+    do_container_mac_change_built_lib libSDL2_image-2.0.0.dylib
+
+  fi
+
   do_container_mac_change_built_lib libgthread-2.0.0.dylib
   do_container_mac_change_built_lib libglib-2.0.0.dylib
   do_container_mac_change_built_lib libintl.8.dylib
   do_container_mac_change_built_lib libpixman-1.0.dylib
   do_container_mac_check_lib
 
-  do_container_mac_copy_built_lib libSDL-1.2.0.dylib
-  do_container_mac_check_lib
+  if [ "${LIBSDL_ABI}" == "1.2" ]
+  then
 
-  do_container_mac_copy_built_lib libSDL_image-1.2.0.dylib
-  do_container_mac_change_built_lib libSDL-1.2.0.dylib
-  do_container_mac_change_built_lib libpng16.16.dylib
-  do_container_mac_change_built_lib libjpeg.9.dylib
-  do_container_mac_change_built_lib libz.1.dylib
-  do_container_mac_check_lib
+    do_container_mac_copy_built_lib libSDL-1.2.0.dylib
+    do_container_mac_check_lib
 
-  do_container_mac_copy_built_lib libSDL2-2.0.0.dylib
-  do_container_mac_check_lib
+    do_container_mac_copy_built_lib libSDL_image-1.2.0.dylib
+    do_container_mac_change_built_lib libSDL-1.2.0.dylib
+    do_container_mac_change_built_lib libpng16.16.dylib
+    do_container_mac_change_built_lib libjpeg.9.dylib
+    do_container_mac_change_built_lib libz.1.dylib
+    do_container_mac_check_lib
 
-  do_container_mac_copy_built_lib libSDL2_image-2.0.0.dylib
-  do_container_mac_change_built_lib libSDL2-2.0.0.dylib
-  do_container_mac_change_built_lib libpng16.16.dylib
-  do_container_mac_change_built_lib libjpeg.9.dylib
-  do_container_mac_change_built_lib libz.1.dylib
-  do_container_mac_change_built_lib libiconv.2.dylib
-  do_container_mac_check_lib
+  elif [ "${LIBSDL_ABI}" == "2.0" ]
+  then
+
+    do_container_mac_copy_built_lib libSDL2-2.0.0.dylib
+    do_container_mac_check_lib
+
+    do_container_mac_copy_built_lib libSDL2_image-2.0.0.dylib
+    do_container_mac_change_built_lib libSDL2-2.0.0.dylib
+    do_container_mac_change_built_lib libpng16.16.dylib
+    do_container_mac_change_built_lib libjpeg.9.dylib
+    do_container_mac_change_built_lib libz.1.dylib
+    do_container_mac_change_built_lib libiconv.2.dylib
+    do_container_mac_check_lib
+
+  fi
 
   do_container_mac_copy_built_lib libpng16.16.dylib
   do_container_mac_change_built_lib libz.1.dylib
@@ -2390,10 +2473,20 @@ do_container_copy_license "${work_folder}/${LIBGETTEXT_FOLDER}" "${LIBGETTEXT_FO
 do_container_copy_license "${work_folder}/${LIBGLIB_FOLDER}" "${LIBGLIB_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBPNG_FOLDER}" "${LIBPNG_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBJPG_FOLDER}" "${LIBJPG_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBSDL1_FOLDER}" "${LIBSDL1_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBSDL1_IMAGE_FOLDER}" "${LIBSDL1_IMAGE_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBSDL2_FOLDER}" "${LIBSDL2_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBSDL2_IMAGE_FOLDER}" "${LIBSDL2_IMAGE_FOLDER}"
+
+if [ "${LIBSDL_ABI}" == "1.2" ]
+then
+
+  do_container_copy_license "${work_folder}/${LIBSDL1_FOLDER}" "${LIBSDL1_FOLDER}"
+  do_container_copy_license "${work_folder}/${LIBSDL1_IMAGE_FOLDER}" "${LIBSDL1_IMAGE_FOLDER}"
+
+elif [ "${LIBSDL_ABI}" == "2.0" ]
+then
+
+  do_container_copy_license "${work_folder}/${LIBSDL2_FOLDER}" "${LIBSDL2_FOLDER}"
+  do_container_copy_license "${work_folder}/${LIBSDL2_IMAGE_FOLDER}" "${LIBSDL2_IMAGE_FOLDER}"
+
+fi
 do_container_copy_license "${work_folder}/${LIBFFI_FOLDER}" "${LIBFFI_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBZ_FOLDER}" "${LIBZ_FOLDER}"
 do_container_copy_license "${work_folder}/${LIBPIXMAN_FOLDER}" "${LIBPIXMAN_FOLDER}"
