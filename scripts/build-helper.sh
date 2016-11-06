@@ -98,67 +98,62 @@ do_host_prepare_prerequisites() {
         caffeinate="caffeinate"
 
         local hb_folder="$HOME/opt/homebrew-gae"
-        # Experimental support for custom Homebrew; 
-        # not great, it still requires MacTex and XQuartz.
+        local tl_folder="$HOME/opt/texlive"
+
+        # Check local Homebrew.
         if [ -d "${hb_folder}" ]
         then
 
           PATH="${hb_folder}/bin":$PATH
-          # The TeX path is separate.
-          PATH="/Library/TeX/texbin":$PATH
           export PATH
 
+          echo
           echo "Checking Homebrew in '${hb_folder}'..."
           set +e
-          brew --version
+          brew --version | grep 'Homebrew '
           if [ $? != 0 ]
           then
             echo "Please install Homebrew and rerun."
+            echo 
+            echo "git clone https://gist.github.com/ilg-ul/46407a070844f764dec6f27bde385797 ~/Downloads/install-homebrew.gist"
+            echo "bash ~/Downloads/install-homebrew.gist/install-homebrew-gae.sh"
             exit 1
           fi
           set -e
 
-          X11_FOLDER="/opt/X11"
+        fi
 
-        else
+        # Check local TeX Live.
+        if [ -d "${tl_folder}" ]
+        then
 
-          if [ -d "$HOME/opt/macports-gae" ]
-          then
-            # Experimental support for custom MacPorts;
-            # not great, it not only requires lots of packages, but
-            # also requires Python installed in system.
-            export PATH="$HOME/opt/macports-gae/bin":"$HOME/opt/macports-gae/sbin":$PATH
-            MACPORTS_FOLDER="$HOME/opt/macports-gae"
-          elif [ -d "/opt/macports" ]
-          then
-            export PATH=/opt/macports/bin:/opt/macports/sbin:$PATH
-            MACPORTS_FOLDER=/opt/macports
-          elif [ -d /opt/local ]
-          then
-            export PATH=/opt/local/bin:/opt/local/sbin:$PATH
-            MACPORTS_FOLDER=/opt/local
-          fi
+          PATH="${tl_folder}/bin/x86_64-darwin":$PATH
+          export PATH
 
           echo
-          echo "Adding ${MACPORTS_FOLDER} to PATH..."
-          echo "Checking MacPorts..."
+          echo "Checking TeX Live in '${tl_folder}'..."
           set +e
-          port version
+          tex --version | grep 'TeX 3'
           if [ $? != 0 ]
           then
-            echo "Please install MacPorts and rerun."
+            echo "Please install TeX Live and rerun."
+            echo 
+            echo "git clone https://gist.github.com/ilg-ul/46407a070844f764dec6f27bde385797 ~/Downloads/install-homebrew.gist"
+            echo "bash ~/Downloads/install-homebrew.gist/install-texlive.sh"
             exit 1
           fi
           set -e
 
-          X11_FOLDER="${MACPORTS_FOLDER}"
         fi
+
+
       fi
 
       echo
       echo "Checking host curl..."
       curl --version | grep curl
 
+      echo
       echo "Checking host git..."
       git --version
 }
