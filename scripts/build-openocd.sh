@@ -364,18 +364,23 @@ fi
 
 # ----- Check some more prerequisites. -----
 
+echo
 echo "Checking host automake..."
 automake --version 2>/dev/null | grep automake
 
+echo
 echo "Checking host patch..."
 patch --version | grep patch
 
+echo
 echo "Checking host tar..."
 tar --version
 
+echo
 echo "Checking host unzip..."
 unzip | grep UnZip
 
+echo
 echo "Checking host makeinfo..."
 makeinfo --version | grep 'GNU texinfo'
 makeinfo_ver=$(makeinfo --version | grep 'GNU texinfo' | sed -e 's/.*) //' -e 's/\..*//')

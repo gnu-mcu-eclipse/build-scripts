@@ -270,6 +270,7 @@ then
 
 # https://www.libsdl.org/release
 
+# LIBSDL2_VERSION="2.0.3" # 2014-03-16
 LIBSDL2_VERSION="2.0.5" # 2016-10-20
 
 LIBSDL2_FOLDER="SDL2-${LIBSDL2_VERSION}"
@@ -473,18 +474,23 @@ fi
 
 # ----- Check some more prerequisites. -----
 
+echo
 echo "Checking host automake..."
 automake --version 2>/dev/null | grep automake
 
+echo
 echo "Checking host patch..."
 patch --version | grep patch
 
+echo
 echo "Checking host tar..."
 tar --version
 
+echo
 echo "Checking host unzip..."
 unzip | grep UnZip
 
+echo
 echo "Checking host makeinfo..."
 makeinfo --version | grep 'GNU texinfo'
 makeinfo_ver=$(makeinfo --version | grep 'GNU texinfo' | sed -e 's/.*) //' -e 's/\..*//')
