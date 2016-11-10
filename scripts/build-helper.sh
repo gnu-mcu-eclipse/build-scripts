@@ -521,7 +521,7 @@ do_container_create_distribution() {
 
         # Check if the application starts (if all dynamic libraries are available).
         echo
-        "${install_folder}/archive/${APP_LC_NAME}/${distribution_file_version}/bin/${distribution_executable_name}" --version
+        "${install_folder}/archive/${APP_LC_NAME}/${distribution_file_version}/bin/${distribution_executable_name}" --version $@
         result="$?"
 
       elif [ "${target_name}" == "osx" ]
