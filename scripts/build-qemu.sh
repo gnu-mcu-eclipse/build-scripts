@@ -40,6 +40,7 @@ IFS=$'\n\t'
 # When running on OS X, a custom Homebrew is required to provide the 
 # missing libraries and TeX binaries.
 #
+# To use SDL1, add `export LIBSDL_ABI="1.2"` to the environment.
 
 # Mandatory definition.
 APP_NAME="QEMU"
@@ -1141,7 +1142,7 @@ then
   echo "Checking patchelf..."
   patchelf --version
 
-  apt-get -y install libmount-dev
+  apt-get -y install libmount-dev mesa-common-dev
 fi
 
 if [ "${target_name}" == "osx" ]
@@ -1546,7 +1547,9 @@ then
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
     bash "${work_folder}/${LIBSDL2_FOLDER}/configure" \
-      --prefix="${install_folder}"
+      --prefix="${install_folder}" \
+      \
+      --enable-video-opengl
 
   elif [ "${target_name}" == "osx" ]
   then
