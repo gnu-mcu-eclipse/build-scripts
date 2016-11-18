@@ -1138,6 +1138,11 @@ then
   echo
   echo "Running configure OpenOCD..."
 
+  # Deprecated:
+  # --enable-ioutil
+  # --enable-oocd_trace
+  # --enable-zy1000
+
   if [ "${target_name}" == "win" ]
   then
 
@@ -1146,9 +1151,7 @@ then
     # --enable-minidriver-dummy -> configure error
     # --enable-buspirate -> not supported on mingw
     # --enable-zy1000 -> netinet/tcp.h: No such file or directory
-    # --enable-sysfsgpio -> 'O_NONBLOCK' undeclared, 'O_SYNC' undeclared
-    # --enable-ioutil -> storage size of 'info' isn't known
-    # --enable-oocd_trace -> termios.h: No such file or directory
+    # --enable-sysfsgpio -> available only on Linux
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
@@ -1252,11 +1255,11 @@ then
     --enable-ep93xx \
     --enable-ftdi \
     --enable-gw16012 \
-    --enable-ioutil \
+    --disable-ioutil \
     --enable-jlink \
     --enable-jtag_vpi \
     --disable-minidriver-dummy \
-    --enable-oocd_trace \
+    --disable-oocd_trace \
     --enable-opendous \
     --enable-openjtag_ftdi \
     --enable-osbdm \
@@ -1275,8 +1278,8 @@ then
     --enable-usb_blaster_libftdi \
     --enable-usbprog \
     --enable-vsllink \
-    --enable-zy1000-master \
-    --enable-zy1000 \
+    --disable-zy1000-master \
+    --disable-zy1000 \
     | tee "${output_folder}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
 
@@ -1288,7 +1291,9 @@ then
     cd "${build_folder}/openocd"
 
     # --enable-minidriver-dummy -> configure error
-    # --enable-oocd_trace -> undeclared identifier 'B2500000'
+    # --enable-sysfsgpio -> available only on Linux
+    # --enable-amtjtagaccel -> 'sys/io.h' file not found
+    # --enable-gw16012 -> 'sys/io.h' file not found
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
@@ -1310,7 +1315,7 @@ then
     --enable-dependency-tracking \
     \
     --enable-aice \
-    --enable-amtjtagaccel \
+    --disable-amtjtagaccel \
     --enable-armjtagew \
     --enable-at91rm9200 \
     --enable-bcm2835gpio \
@@ -1319,8 +1324,8 @@ then
     --enable-dummy \
     --enable-ep93xx \
     --enable-ftdi \
-    --enable-gw16012 \
-    --enable-ioutil \
+    --disable-gw16012 \
+    --disable-ioutil \
     --enable-jlink \
     --enable-jtag_vpi \
     --disable-minidriver-dummy \
@@ -1336,15 +1341,15 @@ then
     --enable-remote-bitbang \
     --enable-rlink \
     --enable-stlink \
-    --enable-sysfsgpio \
+    --disable-sysfsgpio \
     --enable-ti-icdi \
     --enable-ulink \
     --enable-usb-blaster-2 \
     --enable-usb_blaster_libftdi \
     --enable-usbprog \
     --enable-vsllink \
-    --enable-zy1000-master \
-    --enable-zy1000 \
+    --disable-zy1000-master \
+    --disable-zy1000 \
     | tee "${output_folder}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
 
