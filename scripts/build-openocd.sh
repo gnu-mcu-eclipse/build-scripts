@@ -1143,6 +1143,13 @@ then
 
     cd "${build_folder}/openocd"
 
+    # --enable-minidriver-dummy -> configure error
+    # --enable-buspirate -> not supported on mingw
+    # --enable-zy1000 -> netinet/tcp.h: No such file or directory
+    # --enable-sysfsgpio -> 'O_NONBLOCK' undeclared, 'O_SYNC' undeclared
+    # --enable-ioutil -> storage size of 'info' isn't known
+    # --enable-oocd_trace -> termios.h: No such file or directory
+
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
     OUTPUT_DIR="${build_folder}" \
@@ -1161,15 +1168,26 @@ then
     --localedir="${install_folder}/${APP_LC_NAME}/locale"  \
     --mandir="${install_folder}/${APP_LC_NAME}/man"  \
     --docdir="${install_folder}/${APP_LC_NAME}/doc"  \
+    --disable-wextra \
+    --disable-werror \
+    --enable-dependency-tracking \
+    \
     --enable-aice \
     --enable-amtjtagaccel \
     --enable-armjtagew \
+    --enable-at91rm9200 \
+    --enable-bcm2835gpio \
+    --disable-buspirate \
     --enable-cmsis-dap \
     --enable-dummy \
+    --enable-ep93xx \
     --enable-ftdi \
     --enable-gw16012 \
+    --disable-ioutil \
     --enable-jlink \
     --enable-jtag_vpi \
+    --disable-minidriver-dummy \
+    --disable-oocd_trace \
     --enable-opendous \
     --enable-openjtag_ftdi \
     --enable-osbdm \
@@ -1181,12 +1199,15 @@ then
     --enable-remote-bitbang \
     --enable-rlink \
     --enable-stlink \
+    --disable-sysfsgpio \
     --enable-ti-icdi \
     --enable-ulink \
     --enable-usb-blaster-2 \
     --enable-usb_blaster_libftdi \
     --enable-usbprog \
     --enable-vsllink \
+    --disable-zy1000-master \
+    --disable-zy1000 \
     | tee "${output_folder}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
 
@@ -1196,6 +1217,8 @@ then
     LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-""}
 
     cd "${build_folder}/openocd"
+
+    # --enable-minidriver-dummy -> configure error
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
@@ -1214,15 +1237,26 @@ then
     --localedir="${install_folder}/${APP_LC_NAME}/locale"  \
     --mandir="${install_folder}/${APP_LC_NAME}/man"  \
     --docdir="${install_folder}/${APP_LC_NAME}/doc"  \
+    --disable-wextra \
+    --disable-werror \
+    --enable-dependency-tracking \
+    \
     --enable-aice \
     --enable-amtjtagaccel \
     --enable-armjtagew \
+    --enable-at91rm9200 \
+    --enable-bcm2835gpio \
+    --enable-buspirate \
     --enable-cmsis-dap \
     --enable-dummy \
+    --enable-ep93xx \
     --enable-ftdi \
     --enable-gw16012 \
+    --enable-ioutil \
     --enable-jlink \
     --enable-jtag_vpi \
+    --disable-minidriver-dummy \
+    --enable-oocd_trace \
     --enable-opendous \
     --enable-openjtag_ftdi \
     --enable-osbdm \
@@ -1234,12 +1268,15 @@ then
     --enable-remote-bitbang \
     --enable-rlink \
     --enable-stlink \
+    --enable-sysfsgpio \
     --enable-ti-icdi \
     --enable-ulink \
     --enable-usb-blaster-2 \
     --enable-usb_blaster_libftdi \
     --enable-usbprog \
     --enable-vsllink \
+    --enable-zy1000-master \
+    --enable-zy1000 \
     | tee "${output_folder}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
 
@@ -1249,6 +1286,9 @@ then
     DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH:-""}
 
     cd "${build_folder}/openocd"
+
+    # --enable-minidriver-dummy -> configure error
+    # --enable-oocd_trace -> undeclared identifier 'B2500000'
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
@@ -1265,15 +1305,26 @@ then
     --localedir="${install_folder}/${APP_LC_NAME}/locale"  \
     --mandir="${install_folder}/${APP_LC_NAME}/man"  \
     --docdir="${install_folder}/${APP_LC_NAME}/doc"  \
+    --disable-wextra \
+    --disable-werror \
+    --enable-dependency-tracking \
+    \
     --enable-aice \
-    --disable-amtjtagaccel \
+    --enable-amtjtagaccel \
     --enable-armjtagew \
+    --enable-at91rm9200 \
+    --enable-bcm2835gpio \
+    --enable-buspirate \
     --enable-cmsis-dap \
     --enable-dummy \
+    --enable-ep93xx \
     --enable-ftdi \
-    --disable-gw16012 \
+    --enable-gw16012 \
+    --enable-ioutil \
     --enable-jlink \
-    --disable-jtag_vpi \
+    --enable-jtag_vpi \
+    --disable-minidriver-dummy \
+    --disable-oocd_trace \
     --enable-opendous \
     --enable-openjtag_ftdi \
     --enable-osbdm \
@@ -1285,12 +1336,15 @@ then
     --enable-remote-bitbang \
     --enable-rlink \
     --enable-stlink \
+    --enable-sysfsgpio \
     --enable-ti-icdi \
     --enable-ulink \
     --enable-usb-blaster-2 \
     --enable-usb_blaster_libftdi \
     --enable-usbprog \
     --enable-vsllink \
+    --enable-zy1000-master \
+    --enable-zy1000 \
     | tee "${output_folder}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
 
