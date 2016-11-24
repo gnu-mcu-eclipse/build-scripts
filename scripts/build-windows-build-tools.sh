@@ -203,7 +203,8 @@ MSYS2_MAKE_PACK_URL="${MSYS2_MAKE_PACK_URL_BASE}/REPOS/MSYS2/Sources/${MSYS2_MAK
 # https://github.com/rmyorston/busybox-w32
 
 # BUSYBOX_COMMIT="9fe16f6102d8ab907c056c484988057904092c06"
-BUSYBOX_COMMIT="977d65c1bbc57f5cdd0c8bfd67c8b5bb1cd390dd"
+# BUSYBOX_COMMIT="977d65c1bbc57f5cdd0c8bfd67c8b5bb1cd390dd"
+BUSYBOX_COMMIT="9fa1e4990e655a85025c9d270a1606983e375e47"
 
 # BUSYBOX_COMMIT=master
 BUSYBOX_ARCHIVE="${BUSYBOX_COMMIT}.zip"
@@ -222,7 +223,7 @@ then
   then
     echo "Remove all the build folders..."
   else
-    echo "Remove most of the build folders (except output)..."
+    echo 'Remove most of the build folders (except output)...'
   fi
 
   rm -rf "${BUILD_FOLDER}"
@@ -731,6 +732,7 @@ ${cross_compile_prefix}-strip "${install_folder}/build-tools/bin/busybox.exe"
 cp -v "${install_folder}/build-tools/bin/busybox.exe" "${install_folder}/build-tools/bin/sh.exe"
 cp -v "${install_folder}/build-tools/bin/busybox.exe" "${install_folder}/build-tools/bin/rm.exe"
 cp -v "${install_folder}/build-tools/bin/busybox.exe" "${install_folder}/build-tools/bin/echo.exe"
+cp -v "${install_folder}/build-tools/bin/busybox.exe" "${install_folder}/build-tools/bin/mkdir.exe"
 
 # ----- Copy the license files. -----
 
