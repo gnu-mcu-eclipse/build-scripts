@@ -373,8 +373,14 @@ then
   rm -rf "${WORK_FOLDER}/${LIBGETTEXT_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBPCRE_FOLDER}"
   rm -rf "${WORK_FOLDER}/${LIBGLIB_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBSDL1_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBSDL1_IMAGE_FOLDER}"
+  if [ "${LIBSDL_ABI}" == "2.0" ]
+  then
+    rm -rf "${WORK_FOLDER}/${LIBSDL2_FOLDER}"
+    rm -rf "${WORK_FOLDER}/${LIBSDL2_IMAGE_FOLDER}"
+  else
+    rm -rf "${WORK_FOLDER}/${LIBSDL1_FOLDER}"
+    rm -rf "${WORK_FOLDER}/${LIBSDL1_IMAGE_FOLDER}"
+  fi
   rm -rf "${WORK_FOLDER}/${LIBPIXMAN_FOLDER}"
 
   rm -rf "${WORK_FOLDER}/scripts"
@@ -2466,11 +2472,17 @@ then
 
 fi
 
-# ----- Copy the images files. -----
+# ----- Copy the devices JSON files. -----
 
-mkdir -p "${install_folder}/${APP_LC_NAME}/share/qemu/images"
-cp "${git_folder}/gnuarmeclipse/images/"* \
-  "${install_folder}/${APP_LC_NAME}/share/qemu/images"
+mkdir -p "${install_folder}/${APP_LC_NAME}/share/qemu/devices"
+cp "${git_folder}/gnuarmeclipse/devices/"*.json \
+  "${install_folder}/${APP_LC_NAME}/share/qemu/devices"
+
+# ----- Copy the board picture files. -----
+
+mkdir -p "${install_folder}/${APP_LC_NAME}/share/qemu/graphics"
+cp "${git_folder}/gnuarmeclipse/graphics/"*.jpg \
+  "${install_folder}/${APP_LC_NAME}/share/qemu/graphics"
 
 # ----- Copy the license files. -----
 
