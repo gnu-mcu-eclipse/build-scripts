@@ -25,6 +25,11 @@ do_host_stop_timer() {
     DELTA_MIN=$(((DELTA_SEC+30)/60))
     echo "Duration: ${DELTA_MIN} minutes."
   fi
+
+  if [ "${HOST_UNAME}" == "Darwin" ]
+  then
+    say "Wake up, the build completed successfully"
+  fi
 }
 
 # v===========================================================================v
