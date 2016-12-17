@@ -2477,6 +2477,8 @@ fi
 mkdir -p "${install_folder}/${APP_LC_NAME}/share/qemu/devices"
 cp "${git_folder}/gnuarmeclipse/devices/"*.json \
   "${install_folder}/${APP_LC_NAME}/share/qemu/devices"
+cp "${git_folder}/gnuarmeclipse/devices/"README.md \
+  "${install_folder}/${APP_LC_NAME}/share/qemu/devices"
 
 # ----- Copy the board picture files. -----
 
