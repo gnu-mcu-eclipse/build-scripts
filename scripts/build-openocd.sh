@@ -243,6 +243,11 @@ HIDAPI_FOLDER="hidapi-${HIDAPI_VERSION}"
 HIDAPI="${HIDAPI_FOLDER}"
 HIDAPI_ARCHIVE="${HIDAPI}.zip"
 
+# ----- Define build constants. -----
+
+GIT_FOLDER="${WORK_FOLDER}/gnuarmeclipse-${APP_LC_NAME}.git"
+
+DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
 
 # ----- Process actions. -----
 
@@ -270,6 +275,7 @@ then
 
   if [ "${ACTION}" == "cleanall" ]
   then
+    rm -rf "${GIT_FOLDER}"
     rm -rf "${WORK_FOLDER}/output"
   fi
 
@@ -284,13 +290,6 @@ fi
 do_host_start_timer
 
 do_host_detect
-
-# ----- Define build constants. -----
-
-GIT_FOLDER="${WORK_FOLDER}/gnuarmeclipse-${APP_LC_NAME}.git"
-
-DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
-
 
 # ----- Prepare prerequisites. -----
 
@@ -421,7 +420,37 @@ else
     exit 1
 fi
 
-libtoolize --version | grep libtoolize
+# ----- Get the GNU ARM Eclipse OpenOCD git repository. -----
+
+# The custom OpenOCD branch is available from the dedicated Git repository
+# which is part of the GNU ARM Eclipse project hosted on SourceForge.
+# Generally this branch follows the official OpenOCD master branch,
+# with updates after every OpenOCD public release.
+
+if [ ! -d "${GIT_FOLDER}" ]
+then
+
+  cd "${WORK_FOLDER}"
+
+  if [ "${USER}" == "ilg" ]
+  then
+    # Shortcut for ilg, who has full access to the repo.
+    echo
+    echo "If asked, enter ${USER} GitHub password for git clone"
+    git clone -b gnuarmeclipse https://github.com/gnuarmeclipse/openocd.git gnuarmeclipse-${APP_LC_NAME}.git
+  else
+    # For regular read/only access, use the git url.
+    git clone -b gnuarmeclipse http://github.com/gnuarmeclipse/openocd.git gnuarmeclipse-${APP_LC_NAME}.git
+  fi
+
+  # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
+  cd "${GIT_FOLDER}"
+  git checkout -b gnuarmeclipse-dev origin/gnuarmeclipse-dev
+  git submodule update --init --recursive --remote
+
+  do_host_bootstrap
+
+fi
 
 # ----- Process "pull|checkout-dev|checkout-stable" actions. -----
 
@@ -461,14 +490,21 @@ do_repo_action() {
     fi
 
     git pull --recurse-submodules
-    git submodule update --recursive --remote
+    git submodule update --init --recursive --remote
+
+    git branch
 
     do_host_bootstrap
 
     rm -rf "${BUILD_FOLDER}/${APP_LC_NAME}"
 
     echo
-    echo "Pull completed. Proceed with a regular build."
+    if [ "${ACTION}" == "pull" ]
+    then
+      echo "Pull completed. Proceed with a regular build."
+    else
+      echo "Checkout completed. Proceed with a regular build."
+    fi
     exit 0
   else
 	echo "No git folder."
@@ -486,36 +522,6 @@ case "${ACTION}" in
     do_repo_action "${ACTION}"
     ;;
 esac
-
-# ----- Get the GNU ARM Eclipse OpenOCD git repository. -----
-
-# The custom OpenOCD branch is available from the dedicated Git repository
-# which is part of the GNU ARM Eclipse project hosted on SourceForge.
-# Generally this branch follows the official OpenOCD master branch,
-# with updates after every OpenOCD public release.
-
-if [ ! -d "${GIT_FOLDER}" ]
-then
-
-  cd "${WORK_FOLDER}"
-
-  if [ "${USER}" == "ilg" ]
-  then
-    # Shortcut for ilg, who has full access to the repo.
-    echo
-    echo "If asked, enter ${USER} GitHub password for git clone"
-    git clone https://github.com/gnuarmeclipse/openocd.git gnuarmeclipse-${APP_LC_NAME}.git
-  else
-    # For regular read/only access, use the git url.
-    git clone http://github.com/gnuarmeclipse/openocd.git gnuarmeclipse-${APP_LC_NAME}.git
-  fi
-
-  # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
-  cd "${GIT_FOLDER}"
-  git checkout gnuarmeclipse-dev
-  git submodule update --recursive --remote
-
-fi
 
 # Get the current Git branch name, to know if we are building the stable or
 # the development release.
@@ -887,13 +893,13 @@ then
 
   if [ "${target_name}" == "win" ]
   then
-    CFLAGS="-Wno-non-literal-null-conversion -m${target_bits} -pipe" \
+    CFLAGS="-Wno-non-literal-null-conversion -Werror -m${target_bits} -pipe" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/cross-pkg-config" \
     "${work_folder}/${LIBUSB1_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}"
   else
-    CFLAGS="-Wno-non-literal-null-conversion -Wno-deprecated-declarations -m${target_bits} -pipe" \
+    CFLAGS="-Wno-non-literal-null-conversion -Wno-deprecated-declarations -Werror -m${target_bits} -pipe" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/cross-pkg-config" \
     "${work_folder}/${LIBUSB1_FOLDER}/configure" \
       --prefix="${install_folder}"
@@ -932,7 +938,7 @@ then
 
   cd "${build_folder}/${LIBUSB0_FOLDER}"
 
-  CFLAGS="-m${target_bits} -pipe" \
+  CFLAGS="-Werror -m${target_bits} -pipe" \
   \
   PKG_CONFIG_LIBDIR=\
 "${install_folder}/lib/pkgconfig":\
@@ -972,7 +978,7 @@ then
   patch -p1 < "${git_folder}/gnuarmeclipse/patches/${LIBUSB_W32}-mingw-w64.patch"
 
   # Build.
-  CFLAGS="-m${target_bits} -pipe" \
+  CFLAGS="-Wno-unknown-pragmas -Wno-unused-variable -Wno-pointer-sign -Wno-unused-but-set-variable -Werror -m${target_bits} -pipe" \
   make host_prefix=${cross_compile_prefix} host_prefix_x86=i686-w64-mingw32 dll
 
   mkdir -p "${install_folder}/bin"
@@ -1014,7 +1020,7 @@ then
   then
 
     # Configure.
-    CFLAGS="-m${target_bits} -pipe" \
+    CFLAGS="-Werror -m${target_bits} -pipe" \
     \
     PKG_CONFIG_LIBDIR=\
 "${install_folder}/lib/pkgconfig":\
@@ -1036,7 +1042,7 @@ then
 
   else
 
-    CFLAGS="-m${target_bits} -pipe" \
+    CFLAGS="-Werror -m${target_bits} -pipe" \
     \
     PKG_CONFIG_LIBDIR=\
 "${install_folder}/lib/pkgconfig":\
@@ -1105,7 +1111,7 @@ then
   if [ "${target_name}" == "win" ]
   then
 
-    CFLAGS="-m${target_bits} -pipe" \
+    CFLAGS="-Werror -m${target_bits} -pipe" \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
     \
@@ -1120,7 +1126,7 @@ then
 
   else
 
-    CFLAGS="-m${target_bits} -pipe" \
+    CFLAGS="-Werror -m${target_bits} -pipe" \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
     \
@@ -1183,7 +1189,7 @@ then
     # Be sure all these lines end in '\' to ensure lines are concatenated.
     OUTPUT_DIR="${build_folder}" \
     \
-    CPPFLAGS="-m${target_bits} -pipe" \
+    CPPFLAGS="-Werror -m${target_bits} -pipe" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/cross-pkg-config" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     PKG_CONFIG_PREFIX="${install_folder}" \
@@ -1329,7 +1335,7 @@ then
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
-    CPPFLAGS="-m${target_bits} -pipe" \
+    CPPFLAGS="-Werror -m${target_bits} -pipe" \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
     \
