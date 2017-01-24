@@ -87,7 +87,7 @@ while [ $# -gt 0 ]
 do
   case "$1" in
 
-    clean|cleanall|pull|checkout-dev|checkout-stable|build-images|preload-images)
+    clean|cleanall|pull|checkout-dev|checkout-stable|build-images|preload-images|bootstrap)
       ACTION="$1"
       shift
       ;;
@@ -325,6 +325,28 @@ then
   exit 0
 fi
 
+do_host_bootstrap() {
+
+  # Prepare autotools.
+  echo
+  echo "bootstrap..."
+
+  cd "${GIT_FOLDER}"
+  rm -f aclocal.m4
+  ./bootstrap
+
+}
+
+if [ \( "${ACTION}" == "bootstrap" \) ]
+then
+
+  do_host_bootstrap
+
+  do_host_stop_timer
+
+  exit 0
+
+fi
 
 # ----- Process "build-images" action. -----
 
@@ -390,6 +412,19 @@ then
   exit 1
 fi
 
+if which libtoolize > /dev/null; then
+    libtoolize="libtoolize"
+elif which glibtoolize >/dev/null; then
+    libtoolize="glibtoolize"
+else
+    echo "$0: Error: libtool is required" >&2
+    exit 1
+fi
+
+libtoolize --version | grep libtoolize
+
+# ----- Process "pull|checkout-dev|checkout-stable" actions. -----
+
 do_repo_action() {
 
   # $1 = action (pull, checkout-dev, checkout-stable)
@@ -425,17 +460,12 @@ do_repo_action() {
       git checkout gnuarmeclipse
     fi
 
-    git pull
-    git submodule update
+    git pull --recurse-submodules
+    git submodule update --recursive --remote
+
+    do_host_bootstrap
 
     rm -rf "${BUILD_FOLDER}/${APP_LC_NAME}"
-
-    # Prepare autotools.
-    echo
-    echo "Running bootstrap..."
-
-    cd "${GIT_FOLDER}"
-    ./bootstrap
 
     echo
     echo "Pull completed. Proceed with a regular build."
@@ -446,8 +476,6 @@ do_repo_action() {
   fi
 
 }
-
-# ----- Process "pull|checkout-dev|checkout-stable" actions. -----
 
 # For this to work, the following settings are required:
 # git branch --set-upstream-to=origin/gnuarmeclipse-dev gnuarmeclipse-dev
@@ -485,14 +513,7 @@ then
   # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
   cd "${GIT_FOLDER}"
   git checkout gnuarmeclipse-dev
-  git submodule update
-
-  # Prepare autotools.
-  echo
-  echo "bootstrap..."
-
-  cd "${GIT_FOLDER}"
-  ./bootstrap
+  git submodule update --recursive --remote
 
 fi
 
@@ -872,7 +893,7 @@ then
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}"
   else
-    CFLAGS="-Wno-non-literal-null-conversion -m${target_bits} -pipe" \
+    CFLAGS="-Wno-non-literal-null-conversion -Wno-deprecated-declarations -m${target_bits} -pipe" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/cross-pkg-config" \
     "${work_folder}/${LIBUSB1_FOLDER}/configure" \
       --prefix="${install_folder}"
@@ -1142,6 +1163,7 @@ then
   # --enable-ioutil
   # --enable-oocd_trace
   # --enable-zy1000
+  # --enable-legacy-ft2232_libftdi
 
   if [ "${target_name}" == "win" ]
   then
@@ -1152,6 +1174,10 @@ then
     # --enable-buspirate -> not supported on mingw
     # --enable-zy1000 -> netinet/tcp.h: No such file or directory
     # --enable-sysfsgpio -> available only on Linux
+
+    # --enable-openjtag_ftdi -> --enable-openjtag
+    # --enable-presto_libftdi -> --enable-presto
+    # --enable-usb_blaster_libftdi -> --enable-usb_blaster
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
@@ -1192,21 +1218,20 @@ then
     --disable-minidriver-dummy \
     --disable-oocd_trace \
     --enable-opendous \
-    --enable-openjtag_ftdi \
+    --enable-openjtag \
     --enable-osbdm \
-    --enable-legacy-ft2232_libftdi \
     --enable-parport \
     --disable-parport-ppdev \
     --enable-parport-giveio \
-    --enable-presto_libftdi \
+    --enable-presto \
     --enable-remote-bitbang \
     --enable-rlink \
     --enable-stlink \
     --disable-sysfsgpio \
     --enable-ti-icdi \
     --enable-ulink \
+    --enable-usb_blaster \
     --enable-usb-blaster-2 \
-    --enable-usb_blaster_libftdi \
     --enable-usbprog \
     --enable-vsllink \
     --disable-zy1000-master \
@@ -1222,6 +1247,10 @@ then
     cd "${build_folder}/openocd"
 
     # --enable-minidriver-dummy -> configure error
+
+    # --enable-openjtag_ftdi -> --enable-openjtag
+    # --enable-presto_libftdi -> --enable-presto
+    # --enable-usb_blaster_libftdi -> --enable-usb_blaster
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
@@ -1261,21 +1290,20 @@ then
     --disable-minidriver-dummy \
     --disable-oocd_trace \
     --enable-opendous \
-    --enable-openjtag_ftdi \
+    --enable-openjtag \
     --enable-osbdm \
-    --enable-legacy-ft2232_libftdi \
     --enable-parport \
     --disable-parport-ppdev \
     --enable-parport-giveio \
-    --enable-presto_libftdi \
+    --enable-presto \
     --enable-remote-bitbang \
     --enable-rlink \
     --enable-stlink \
     --enable-sysfsgpio \
     --enable-ti-icdi \
     --enable-ulink \
+    --enable-usb_blaster \
     --enable-usb-blaster-2 \
-    --enable-usb_blaster_libftdi \
     --enable-usbprog \
     --enable-vsllink \
     --disable-zy1000-master \
@@ -1294,6 +1322,10 @@ then
     # --enable-sysfsgpio -> available only on Linux
     # --enable-amtjtagaccel -> 'sys/io.h' file not found
     # --enable-gw16012 -> 'sys/io.h' file not found
+
+    # --enable-openjtag_ftdi -> --enable-openjtag
+    # --enable-presto_libftdi -> --enable-presto
+    # --enable-usb_blaster_libftdi -> --enable-usb_blaster
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
@@ -1331,21 +1363,20 @@ then
     --disable-minidriver-dummy \
     --disable-oocd_trace \
     --enable-opendous \
-    --enable-openjtag_ftdi \
+    --enable-openjtag \
     --enable-osbdm \
-    --enable-legacy-ft2232_libftdi \
     --disable-parport \
     --disable-parport-ppdev \
     --disable-parport-giveio \
-    --enable-presto_libftdi \
+    --enable-presto \
     --enable-remote-bitbang \
     --enable-rlink \
     --enable-stlink \
     --disable-sysfsgpio \
     --enable-ti-icdi \
     --enable-ulink \
-    --enable-usb-blaster-2 \
-    --enable-usb_blaster_libftdi \
+    --enable-usb-blaster \
+    --enable-usb_blaster_2 \
     --enable-usbprog \
     --enable-vsllink \
     --disable-zy1000-master \
