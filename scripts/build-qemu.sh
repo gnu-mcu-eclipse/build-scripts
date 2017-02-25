@@ -1199,7 +1199,7 @@ then
 
   elif [ "${target_name}" == "osx" ]
   then
-    CFLAGS="-m${target_bits} -pipe" \
+    CFLAGS="-m${target_bits} -pipe -Wno-shift-negative-value" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
@@ -1656,7 +1656,7 @@ then
 
   elif [ "${target_name}" == "osx" ]
   then
-    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include -Wno-macro-redefined" \
     LDFLAGS="-L${install_folder}/lib" \
     LIBS="-lpng16 -ljpeg" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
@@ -1793,7 +1793,7 @@ then
   elif [ "${target_name}" == "osx" ]
   then
 
-    CFLAGS="-m${target_bits} -pipe" \
+    CFLAGS="-m${target_bits} -pipe -Wno-tautological-compare -Wno-parentheses-equality -Wno-static-in-inline" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
@@ -1878,7 +1878,7 @@ then
   elif [ "${target_name}" == "osx" ]
   then
 
-    CFLAGS="-m${target_bits} -pipe" \
+    CFLAGS="-m${target_bits} -pipe -Wno-format-extra-args" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
@@ -2018,7 +2018,7 @@ then
   elif [ "${target_name}" == "osx" ]
   then
     # To find libintl, add explicit paths.
-    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include -Wno-int-conversion -Wno-tautological-constant-out-of-range-compare -Wno-deprecated-declarations -Wno-shift-negative-value -Wno-#warnings -Wno-self-assign" \
     LDFLAGS="-L${install_folder}/lib" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
@@ -2076,7 +2076,7 @@ then
   elif [ "${target_name}" == "osx" ]
   then
     # To find libintl, add explicit paths.
-    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
+    CFLAGS="-m${target_bits} -pipe -I${install_folder}/include -Wno-unused-const-variable -Wno-shift-negative-value -Wno-tautological-constant-out-of-range-compare -Wno-unknown-attributes" \
     LDFLAGS="-L${install_folder}/lib" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
@@ -2617,7 +2617,7 @@ mkdir -p ${WORK_FOLDER}/output
 echo "" > ${WORK_FOLDER}/output/empty.md5
 # ----
 
-cat "${WORK_FOLDER}/output/"*.md5
+cat "${WORK_FOLDER}/output/"*.md5 "${WORK_FOLDER}/output/"*.sha
 
 source "$helper_script" "--stop-timer"
 
