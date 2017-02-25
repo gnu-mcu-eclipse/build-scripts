@@ -552,7 +552,26 @@ do_container_create_distribution() {
           --install-location "${distribution_install_folder:1}/${distribution_file_version}" \
           "${distribution_file}"
 
-        do_compute_md5 "md5" "-r" "${distribution_file}"
+        # do_compute_md5 "md5" "-r" "${distribution_file}"
+        pushd "$(dirname ${distribution_file})"
+        do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
+        popd
+        
+        distribution_archive="${distribution_folder}/gnuarmeclipse-${APP_LC_NAME}-${target_folder}-${distribution_file_version}.tgz"
+
+        rm -rf "${install_folder}/archive/"
+        # The archive will use the 'gnuarmeclipse/qemu/version'' hierarchy.
+        mkdir -p "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}"
+        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}"
+
+        pushd "${install_folder}/archive"
+        tar -c -z -f "${distribution_archive}" gnuarmeclipse
+        popd
+
+        # do_compute_md5 "md5sum" "-t" "${distribution_file}"
+        pushd "$(dirname ${distribution_archive})"
+        do_compute_sha shasum -a 256 -p "$(basename ${distribution_archive})"
+        popd
 
         echo
         ls -l "${install_folder}/${APP_LC_NAME}/bin"
@@ -587,8 +606,15 @@ do_container_completed() {
       if [ "${result}" == "0" ]
       then
         echo "Build completed."
+        echo
         echo "Distribution file ${distribution_file} created."
         ls -l "${distribution_file}"
+
+        if [ "${target_name}" == "osx" ]
+        then
+          echo "Distribution file ${distribution_archive} created."
+          ls -l "${distribution_archive}"
+        fi
       else
         echo "Build failed."
       fi
@@ -926,6 +952,18 @@ do_compute_md5() {
   cd $(dirname $3)
   "$1" "$2" "$(basename $3)" >"${md5_file}"
   echo "MD5: $(cat ${md5_file})"
+}
+
+# v===========================================================================v
+do_compute_sha() {
+  # $1 shasum program
+  # $2.. options
+  # ${!#} file
+
+  file=${!#}
+  sha_file="${file}.sha"
+  "$@" >"${sha_file}"
+  echo "SHA: $(cat ${sha_file})"
 }
 
 # ^===========================================================================^
