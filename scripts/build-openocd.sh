@@ -861,14 +861,8 @@ then
   patchelf --version
 fi
 
-if [ "${target_name}" == "osx" ]
-then
-  echo "Checking md5..."
-  md5 -s "test"
-else
-  echo "Checking md5sum..."
-  md5sum --version
-fi
+echo "Checking shasum..."
+shasum --version
 
 # ----- Remove and recreate the output folder. -----
 
@@ -1655,7 +1649,7 @@ then
     --docker-image "ilegeul/debian32:8-gnuarm-gcc-x11-v4"
 fi
 
-cat "${WORK_FOLDER}/output/"*.md5
+do_host_show_sha
 
 do_host_stop_timer
 

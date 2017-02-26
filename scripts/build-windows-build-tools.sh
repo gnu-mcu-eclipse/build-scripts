@@ -584,8 +584,8 @@ unix2dos --version 2>&1 | grep unix2dos
 echo "Checking makensis..."
 echo "makensis $(makensis -VERSION)"
 
-echo "Checking md5sum..."
-md5sum --version
+echo "Checking shasum..."
+shasum --version
 
 # ----- Remove and recreate the output folder. -----
 
@@ -814,7 +814,9 @@ makensis -V4 -NOCD \
   "${nsis_file}"
 result="$?"
 
-do_compute_md5 "md5sum" "-t" "${distribution_file}"
+pushd "$(dirname ${distribution_file})"
+do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
+popd
 
 if [ "${host_uname}" == "Linux" ]
 then
@@ -862,7 +864,7 @@ then
     --docker-image "ilegeul/debian:8-gnuarm-mingw-v2"
 fi
 
-cat "${WORK_FOLDER}/output/"*.md5
+do_host_show_sha
 
 do_host_stop_timer
 

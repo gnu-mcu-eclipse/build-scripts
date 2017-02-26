@@ -2612,14 +2612,9 @@ fi
 
 # echo "4|$@|"
 
-# ---- Prevent script break because of not found MD5 file without arguments ----
-mkdir -p ${WORK_FOLDER}/output
-echo "" > ${WORK_FOLDER}/output/empty.md5
-# ----
+do_host_show_sha
 
-cat "${WORK_FOLDER}/output/"*.md5 "${WORK_FOLDER}/output/"*.sha
-
-source "$helper_script" "--stop-timer"
+do_host_stop_timer
 
 # ----- Done. -----
 exit 0

@@ -303,6 +303,18 @@ do_host_build_target() {
 }
 
 # v===========================================================================v
+do_host_show_sha() {
+
+  # ---- Prevent script break because of not found SHA file without arguments ----
+  mkdir -p ${WORK_FOLDER}/output
+  echo "" > ${WORK_FOLDER}/output/empty.sha
+  # ----
+
+  cat "${WORK_FOLDER}/output/"*.sha
+
+}
+
+# v===========================================================================v
 run_docker_script() {
 
   while [ $# -gt 0 ]
@@ -468,7 +480,9 @@ do_container_create_distribution() {
           "${nsis_file}"
         result="$?"
 
-        do_compute_md5 "md5sum" "-t" "${distribution_file}"
+        pushd "$(dirname ${distribution_file})"
+        do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
+        popd
 
         # Display some information about the created application.
         echo
@@ -492,7 +506,9 @@ do_container_create_distribution() {
         cd "${install_folder}/archive"
         tar czf "${distribution_file}" --owner root --group root ${APP_LC_NAME}
 
-        do_compute_md5 "md5sum" "-t" "${distribution_file}"
+        pushd "$(dirname ${distribution_file})"
+        do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
+        popd
 
         # Display some information about the created application.
         pushd "${install_folder}/archive/${APP_LC_NAME}/${distribution_file_version}/bin"
@@ -552,7 +568,6 @@ do_container_create_distribution() {
           --install-location "${distribution_install_folder:1}/${distribution_file_version}" \
           "${distribution_file}"
 
-        # do_compute_md5 "md5" "-r" "${distribution_file}"
         pushd "$(dirname ${distribution_file})"
         do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
         popd
@@ -568,7 +583,6 @@ do_container_create_distribution() {
         tar -c -z -f "${distribution_archive}" gnuarmeclipse
         popd
 
-        # do_compute_md5 "md5sum" "-t" "${distribution_file}"
         pushd "$(dirname ${distribution_archive})"
         do_compute_sha shasum -a 256 -p "$(basename ${distribution_archive})"
         popd
@@ -943,18 +957,6 @@ do_strip_() {
 }
 
 # v===========================================================================v
-do_compute_md5() {
-  # $1 md5 program
-  # $2 options
-  # $3 file
-
-  md5_file=$(echo "$3" | sed -e 's/\.[etp][xgk][ezg]$/.md5/')
-  cd $(dirname $3)
-  "$1" "$2" "$(basename $3)" >"${md5_file}"
-  echo "MD5: $(cat ${md5_file})"
-}
-
-# v===========================================================================v
 do_compute_sha() {
   # $1 shasum program
   # $2.. options
@@ -967,6 +969,5 @@ do_compute_sha() {
 }
 
 # ^===========================================================================^
-
 
 # Continue in calling script.
