@@ -501,17 +501,17 @@ do_container_create_distribution() {
         distribution_file="${distribution_folder}/gnuarmeclipse-${APP_LC_NAME}-${target_folder}-${distribution_file_version}.tgz"
 
         rm -rf "${install_folder}/archive/"
-        mkdir -p "${install_folder}/archive/${APP_LC_NAME}/${distribution_file_version}"
-        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/${APP_LC_NAME}/${distribution_file_version}"
+        mkdir -p "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}"
+        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}"
         cd "${install_folder}/archive"
-        tar czf "${distribution_file}" --owner root --group root ${APP_LC_NAME}
+        tar -c -z -f "${distribution_file}" --owner root --group root gnuarmeclipse
 
         pushd "$(dirname ${distribution_file})"
         do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
         popd
 
         # Display some information about the created application.
-        pushd "${install_folder}/archive/${APP_LC_NAME}/${distribution_file_version}/bin"
+        pushd "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}/bin"
         rm -rf /tmp/mylibs
         echo
         echo "Libraries:"
@@ -538,11 +538,11 @@ do_container_create_distribution() {
         popd
         set -e
         echo
-        ls -l "${install_folder}/archive/${APP_LC_NAME}/${distribution_file_version}/bin"
+        ls -l "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}/bin"
 
         # Check if the application starts (if all dynamic libraries are available).
         echo
-        "${install_folder}/archive/${APP_LC_NAME}/${distribution_file_version}/bin/${distribution_executable_name}" --version $@
+        "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}/bin/${distribution_executable_name}" --version $@
         result="$?"
 
       elif [ "${target_name}" == "osx" ]
@@ -575,7 +575,7 @@ do_container_create_distribution() {
         distribution_archive="${distribution_folder}/gnuarmeclipse-${APP_LC_NAME}-${target_folder}-${distribution_file_version}.tgz"
 
         rm -rf "${install_folder}/archive/"
-        # The archive will use the 'gnuarmeclipse/qemu/version'' hierarchy.
+        # The archive will use the 'gnuarmeclipse/qemu/version' hierarchy.
         mkdir -p "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}"
         cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}"
 
