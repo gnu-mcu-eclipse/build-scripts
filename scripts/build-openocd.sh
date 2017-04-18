@@ -238,9 +238,14 @@ LIBFTDI="${LIBFTDI_FOLDER}"
 
 # https://github.com/signal11/hidapi/downloads
 # Oct 26, 2011
-HIDAPI_VERSION="0.7.0"
-HIDAPI_FOLDER="hidapi-${HIDAPI_VERSION}"
-HIDAPI="${HIDAPI_FOLDER}"
+# HIDAPI_VERSION="0.7.0"
+
+# https://github.com/signal11/hidapi/archive/hidapi-0.8.0-rc1.zip
+# Oct 7, 2013
+
+HIDAPI_VERSION="0.8.0-rc1"
+HIDAPI_FOLDER="hidapi-hidapi-${HIDAPI_VERSION}"
+HIDAPI="hidapi-${HIDAPI_VERSION}"
 HIDAPI_ARCHIVE="${HIDAPI}.zip"
 
 # ----- Define build constants. -----
@@ -638,7 +643,9 @@ then
 
   cd "${DOWNLOAD_FOLDER}"
   echo "Downloading \"${HIDAPI_ARCHIVE}\"..."
-  curl -L "https://github.com/downloads/signal11/hidapi/${HIDAPI_ARCHIVE}" \
+  # https://github.com/downloads/signal11/hidapi
+  # https://github.com/signal11/hidapi/archive/
+  curl -L "https://github.com/signal11/hidapi/archive//${HIDAPI_ARCHIVE}" \
     --output "${HIDAPI_ARCHIVE}"
 fi
 
@@ -1078,17 +1085,18 @@ if [ "${target_name}" == "win" ]
 then
   HIDAPI_TARGET="windows"
   HIDAPI_OBJECT="hid.o"
+  HIDAPI_A="libhid.a"
 elif [ "${target_name}" == "osx" ]
 then
   HIDAPI_TARGET="mac"
-  HIDAPI_OBJECT="hid.o"
+  HIDAPI_A="libhidapi.a"
 elif [ "${target_name}" == "debian" ]
 then
   HIDAPI_TARGET="linux"
-  HIDAPI_OBJECT="hid-libusb.o"
+  HIDAPI_A="libhidapi-hidraw.a"
 fi
 
-if [ ! -f "${install_folder}/lib/libhid.a" ]
+if [ ! -f "${install_folder}/lib/${HIDAPI_A}" ]
 then
 
   rm -rfv "${build_folder}/${HIDAPI_FOLDER}"
@@ -1100,10 +1108,10 @@ then
   echo
   echo "Running make libhid..."
 
-  cd "${build_folder}/${HIDAPI_FOLDER}/${HIDAPI_TARGET}"
-
   if [ "${target_name}" == "win" ]
   then
+
+    cd "${build_folder}/${HIDAPI_FOLDER}/${HIDAPI_TARGET}"
 
     CFLAGS="-Werror -m${target_bits} -pipe" \
     \
@@ -1118,33 +1126,64 @@ then
     ar -r  libhid.a "${HIDAPI_OBJECT}"
     ${cross_compile_prefix}-ranlib libhid.a
 
-  else
+    mkdir -p "${install_folder}/lib"
+    cp -v libhid.a \
+      "${install_folder}/lib"
+
+    mkdir -p "${install_folder}/lib/pkgconfig"
+    sed -e "s|XXX|${install_folder}|" \
+      "${git_folder}/gnuarmeclipse/pkgconfig/${HIDAPI}-${HIDAPI_TARGET}.pc" \
+      > "${install_folder}/lib/pkgconfig/hidapi.pc"
+
+    mkdir -p "${install_folder}/include/hidapi"
+    cp -v "${work_folder}/${HIDAPI_FOLDER}/hidapi/hidapi.h" \
+      "${install_folder}/include/hidapi"
+
+  elif [ "${target_name}" == "debian" ]
+  then
+
+    if [ ${target_bits} == "64" ]
+    then
+      cp /usr/include/libudev.h "${install_folder}/include"
+      cp /usr/lib/x86_64-linux-gnu/libudev.so  "${install_folder}/lib"
+      cp /usr/lib/x86_64-linux-gnu/pkgconfig/libudev.pc "${install_folder}/lib/pkgconfig"
+    elif [ ${target_bits} == "32" ] 
+    then
+      cp /usr/include/libudev.h "${install_folder}/include"
+      cp /usr/lib/i386-linux-gnu/libudev.so  "${install_folder}/lib"
+      cp /usr/lib/i386-linux-gnu/pkgconfig/libudev.pc "${install_folder}/lib/pkgconfig"
+    fi
+
+    cd "${build_folder}/${HIDAPI_FOLDER}"
+
+    ./bootstrap
 
     CFLAGS="-Werror -m${target_bits} -pipe" \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
     \
-    make clean "${HIDAPI_OBJECT}"
+    ./configure --prefix="${install_folder}"
 
-    # Make just compiles the file. Create the archive.
-    # No dynamic/shared libs involved.
-    ar -r libhid.a ${HIDAPI_OBJECT}
-    ranlib libhid.a
+    make
+    make install
+
+  elif [ "${target_name}" == "osx" ]
+  then
+
+    cd "${build_folder}/${HIDAPI_FOLDER}"
+
+    ./bootstrap
+
+    CFLAGS="-Werror -m${target_bits} -pipe" \
+    \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
+    \
+    ./configure --prefix="${install_folder}"
+
+    make
+    make install
 
   fi
-
-  mkdir -p "${install_folder}/lib"
-  cp -v libhid.a \
-     "${install_folder}/lib"
-
-  mkdir -p "${install_folder}/lib/pkgconfig"
-  sed -e "s|XXX|${install_folder}|" \
-    "${git_folder}/gnuarmeclipse/pkgconfig/${HIDAPI}-${HIDAPI_TARGET}.pc" \
-    > "${install_folder}/lib/pkgconfig/hidapi.pc"
-
-  mkdir -p "${install_folder}/include/hidapi"
-  cp -v "${work_folder}/${HIDAPI_FOLDER}/hidapi/hidapi.h" \
-     "${install_folder}/include/hidapi"
 
 fi
 
@@ -1504,6 +1543,7 @@ then
   do_container_linux_copy_user_so libusb-1.0
   do_container_linux_copy_user_so libusb-0.1
   do_container_linux_copy_user_so libftdi1
+  do_container_linux_copy_user_so libhidapi-hidraw
 
   do_container_linux_copy_system_so libudev
   do_container_linux_copy_librt_so
@@ -1528,6 +1568,7 @@ then
     "${install_folder}/${APP_LC_NAME}/bin/openocd"
   do_container_mac_change_built_lib libusb-1.0.0.dylib
   do_container_mac_change_built_lib libusb-0.1.4.dylib
+  do_container_mac_change_built_lib libhidapi.0.dylib
   do_container_mac_check_lib
 
   do_container_mac_copy_built_lib libftdi1.2.dylib
@@ -1539,6 +1580,9 @@ then
   do_container_mac_check_lib
 
   do_container_mac_copy_built_lib libusb-1.0.0.dylib
+  do_container_mac_check_lib
+
+  do_container_mac_copy_built_lib libhidapi.0.dylib
   do_container_mac_check_lib
 
 fi
