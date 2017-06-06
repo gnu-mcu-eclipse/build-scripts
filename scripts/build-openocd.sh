@@ -1222,7 +1222,7 @@ then
     # Be sure all these lines end in '\' to ensure lines are concatenated.
     OUTPUT_DIR="${build_folder}" \
     \
-    CPPFLAGS="-Werror -m${target_bits} -pipe" \
+    CPPFLAGS="-Werror -m${target_bits} -pipe -DGNU_MCU_ECLIPSE_RISCV" \
     PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/cross-pkg-config" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     PKG_CONFIG_PREFIX="${install_folder}" \
@@ -1294,7 +1294,7 @@ then
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
     # On some machines libftdi ends in lib64, so we refer both lib & lib64
-    CPPFLAGS="-m${target_bits} -pipe" \
+    CPPFLAGS="-m${target_bits} -pipe -DGNU_MCU_ECLIPSE_RISCV" \
     LDFLAGS='-Wl,-lpthread' \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
@@ -1368,7 +1368,7 @@ then
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
-    CPPFLAGS="-Werror -m${target_bits} -pipe" \
+    CPPFLAGS="-Werror -m${target_bits} -pipe -DGNU_MCU_ECLIPSE_RISCV" \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
     \
