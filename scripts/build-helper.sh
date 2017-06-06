@@ -120,8 +120,9 @@ do_host_prepare_prerequisites() {
           then
             echo "Please install Homebrew and rerun."
             echo 
-            echo "git clone https://gist.github.com/ilg-ul/46407a070844f764dec6f27bde385797 ~/Downloads/install-homebrew.gist"
-            echo "bash ~/Downloads/install-homebrew.gist/install-homebrew-gae.sh"
+            echo "mkdir -p \${HOME}/opt"
+            echo "git clone https://github.com/ilg-ul/opt-install-scripts \${HOME}/opt/install-scripts.git"
+            echo "bash \${HOME}/opt/install-scripts.git/install-homebrew-gae.sh"
             exit 1
           fi
           set -e
@@ -143,8 +144,9 @@ do_host_prepare_prerequisites() {
           then
             echo "Please install TeX Live and rerun."
             echo 
-            echo "git clone https://gist.github.com/ilg-ul/46407a070844f764dec6f27bde385797 ~/Downloads/install-homebrew.gist"
-            echo "bash ~/Downloads/install-homebrew.gist/install-texlive.sh"
+            echo "mkdir -p \${HOME}/opt"
+            echo "git clone https://github.com/ilg-ul/opt-install-scripts \${HOME}/opt/install-scripts.git"
+            echo "bash \${HOME}/opt/install-scripts.git/install-texlive.sh"
             exit 1
           fi
           set -e
@@ -203,7 +205,7 @@ do_host_get_git_head() {
 do_host_get_current_date() {
 
       # Use the UTC date as version in the name of the distribution file.
-      DISTRIBUTION_FILE_DATE=${DISTRIBUTION_FILE_DATE:-$(date -u +%Y%m%d%H%M)}
+      DISTRIBUTION_FILE_DATE=${DISTRIBUTION_FILE_DATE:-$(date -u +%Y%m%d-%H%M)}
 }
 
 # v===========================================================================v
@@ -420,33 +422,33 @@ do_container_copy_info() {
       echo
       echo "Copying info files..."
 
-      /usr/bin/install -cv -m 644 "${git_folder}/gnuarmeclipse/info/INFO-${generic_target_name}.txt" \
+      /usr/bin/install -cv -m 644 "${git_folder}/gnu-mcu-eclipse/info/INFO-${generic_target_name}.txt" \
         "${install_folder}/${APP_LC_NAME}/INFO.txt"
       do_unix2dos "${install_folder}/${APP_LC_NAME}/INFO.txt"
 
-      mkdir -p "${install_folder}/${APP_LC_NAME}/gnuarmeclipse"
+      mkdir -p "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse"
 
-      /usr/bin/install -cv -m 644 "${git_folder}/gnuarmeclipse/info/BUILD-${generic_target_name}.txt" \
-        "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/BUILD.txt"
-      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/BUILD.txt"
+      /usr/bin/install -cv -m 644 "${git_folder}/gnu-mcu-eclipse/info/BUILD-${generic_target_name}.txt" \
+        "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/BUILD.txt"
+      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/BUILD.txt"
 
-      /usr/bin/install -cv -m 644 "${git_folder}/gnuarmeclipse/info/CHANGES.txt" \
-        "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/CHANGES.txt"
-      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/CHANGES.txt"
+      /usr/bin/install -cv -m 644 "${git_folder}/gnu-mcu-eclipse/info/CHANGES.txt" \
+        "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/CHANGES.txt"
+      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/CHANGES.txt"
 
       # Copy the current build script
       /usr/bin/install -cv -m 644 "${work_folder}/scripts/build-${APP_LC_NAME}.sh" \
-        "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/build-${APP_LC_NAME}.sh"
-      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/build-${APP_LC_NAME}.sh"
+        "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-${APP_LC_NAME}.sh"
+      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-${APP_LC_NAME}.sh"
 
       # Copy the current build helper script
       /usr/bin/install -cv -m 644 "${work_folder}/scripts/build-helper.sh" \
-        "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/build-helper.sh"
-      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/build-helper.sh"
+        "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-helper.sh"
+      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-helper.sh"
 
       /usr/bin/install -cv -m 644 "${output_folder}/config.log" \
-        "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/config.log"
-      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/config.log"
+        "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/config.log"
+      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/config.log"
 }
 
 # v===========================================================================v
@@ -456,18 +458,37 @@ do_container_create_distribution() {
       then
 
         echo
+        echo "Creating archive..."
+        echo
+
+        distribution_archive="${distribution_folder}/gnu-mcu-eclipse-${APP_LC_NAME}-${distribution_file_version}-${target_folder}.zip"
+
+        rm -rf "${install_folder}/archive/"
+        # The archive will use the 'gnu-mcu-eclipse/app/version' hierarchy.
+        mkdir -p "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
+        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
+
+        pushd "${install_folder}/archive"
+        zip -r -q "${distribution_archive}" gnu-mcu-eclipse
+        popd
+
+        pushd "$(dirname ${distribution_archive})"
+        do_compute_sha shasum -a 256 -p "$(basename ${distribution_archive})"
+        popd
+
+        echo
         echo "Creating setup..."
         echo
 
-        distribution_file="${distribution_folder}/gnuarmeclipse-${APP_LC_NAME}-${target_folder}-${distribution_file_version}-setup.exe"
+        distribution_file="${distribution_folder}/gnu-mcu-eclipse-${APP_LC_NAME}-${distribution_file_version}-${target_folder}-setup.exe"
 
         # Not passed as it, used by makensis for the MUI_PAGE_LICENSE; must be DOS.
         cp "${git_folder}/COPYING" \
           "${install_folder}/${APP_LC_NAME}/COPYING"
         unix2dos "${install_folder}/${APP_LC_NAME}/COPYING"
 
-        nsis_folder="${git_folder}/gnuarmeclipse/nsis"
-        nsis_file="${nsis_folder}/gnuarmeclipse-${APP_LC_NAME}.nsi"
+        nsis_folder="${git_folder}/gnu-mcu-eclipse/nsis"
+        nsis_file="${nsis_folder}/gnu-mcu-eclipse-${APP_LC_NAME}.nsi"
 
         cd "${build_folder}"
         makensis -V4 -NOCD \
@@ -498,20 +519,20 @@ do_container_create_distribution() {
         echo "Creating tgz archive..."
         echo
 
-        distribution_file="${distribution_folder}/gnuarmeclipse-${APP_LC_NAME}-${target_folder}-${distribution_file_version}.tgz"
+        distribution_file="${distribution_folder}/gnu-mcu-eclipse-${APP_LC_NAME}-${distribution_file_version}-${target_folder}.tgz"
 
         rm -rf "${install_folder}/archive/"
-        mkdir -p "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}"
-        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}"
+        mkdir -p "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
+        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
         cd "${install_folder}/archive"
-        tar -c -z -f "${distribution_file}" --owner root --group root gnuarmeclipse
+        tar -c -z -f "${distribution_file}" --owner root --group root gnu-mcu-eclipse
 
         pushd "$(dirname ${distribution_file})"
         do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
         popd
 
         # Display some information about the created application.
-        pushd "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}/bin"
+        pushd "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}/bin"
         rm -rf /tmp/mylibs
         echo
         echo "Libraries:"
@@ -538,11 +559,11 @@ do_container_create_distribution() {
         popd
         set -e
         echo
-        ls -l "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}/bin"
+        ls -l "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}/bin"
 
         # Check if the application starts (if all dynamic libraries are available).
         echo
-        "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}/bin/${distribution_executable_name}" --version $@
+        "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}/bin/${distribution_executable_name}" --version $@
         result="$?"
 
       elif [ "${target_name}" == "osx" ]
@@ -552,9 +573,9 @@ do_container_create_distribution() {
         echo "Creating installer package..."
         echo
 
-        distribution_file="${distribution_folder}/gnuarmeclipse-${APP_LC_NAME}-${target_folder}-${distribution_file_version}.pkg"
+        distribution_file="${distribution_folder}/gnu-mcu-eclipse-${APP_LC_NAME}-${distribution_file_version}-${target_folder}.pkg"
 
-        distribution_install_folder=${distribution_install_folder:-"/Applications/GNU ARM Eclipse/${APP_NAME}"}
+        distribution_install_folder=${distribution_install_folder:-"/Applications/GNU MCU Eclipse/${APP_NAME}"}
 
         # Create the installer package, with content from the
         # ${distribution_install_folder}/${APP_LC_NAME} folder.
@@ -564,7 +585,7 @@ do_container_create_distribution() {
         cd "${work_folder}"
         pkgbuild \
           --root "${install_folder}/${APP_LC_NAME}" \
-          --identifier "ilg.gnuarmeclipse.${APP_LC_NAME}.${DISTRIBUTION_FILE_DATE}" \
+          --identifier "ilg.gnu-mcu-eclipse.${APP_LC_NAME}.${DISTRIBUTION_FILE_DATE}" \
           --install-location "${distribution_install_folder:1}/${distribution_file_version}" \
           "${distribution_file}"
 
@@ -572,15 +593,15 @@ do_container_create_distribution() {
         do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
         popd
         
-        distribution_archive="${distribution_folder}/gnuarmeclipse-${APP_LC_NAME}-${target_folder}-${distribution_file_version}.tgz"
+        distribution_archive="${distribution_folder}/gnu-mcu-eclipse-${APP_LC_NAME}-${distribution_file_version}-${target_folder}.tgz"
 
         rm -rf "${install_folder}/archive/"
-        # The archive will use the 'gnuarmeclipse/qemu/version' hierarchy.
-        mkdir -p "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}"
-        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnuarmeclipse/${APP_LC_NAME}/${distribution_file_version}"
+        # The archive will use the 'gnu-mcu-eclipse/app/version' hierarchy.
+        mkdir -p "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
+        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
 
         pushd "${install_folder}/archive"
-        tar -c -z -f "${distribution_archive}" gnuarmeclipse
+        tar -c -z -f "${distribution_archive}" gnu-mcu-eclipse
         popd
 
         pushd "$(dirname ${distribution_archive})"

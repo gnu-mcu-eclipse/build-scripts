@@ -19,7 +19,7 @@ IFS=$'\n\t'
 
 # -----------------------------------------------------------------------------
 
-# Script to build the GNU ARM Eclipse OpenOCD distribution packages.
+# Script to build the GNU MCU Eclipse OpenOCD distribution packages.
 #
 # Developed on OS X 10.12 Sierra.
 # Also tested on:
@@ -35,7 +35,7 @@ IFS=$'\n\t'
 # Prerequisites:
 #
 #   Docker
-#   curl, git, automake, patch, tar, unzip
+#   curl, git, automake, patch, tar, unzip, zip
 #
 # When running on OS X, a custom Homebrew is required to provide the 
 # missing libraries and TeX binaries.
@@ -133,7 +133,7 @@ do
       ;;
 
     --help)
-      echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
+      echo "Build the GNU MCU Eclipse ${APP_NAME} distributions."
       echo "Usage:"
       echo "    bash $0 helper_script [--win32] [--win64] [--deb32] [--deb64] [--osx] [--all] [clean|cleanall|pull|checkout-dev|checkout-stable|build-images] [--help]"
       echo
@@ -175,7 +175,7 @@ then
   then
     # Download helper script from GitHub git.
     echo "Downloading helper script..."
-    curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
+    curl -L "https://github.com/gnu-mcu-eclipse/build-scripts/raw/master/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
     helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
   else
@@ -250,7 +250,7 @@ HIDAPI_ARCHIVE="${HIDAPI}.zip"
 
 # ----- Define build constants. -----
 
-GIT_FOLDER="${WORK_FOLDER}/gnuarmeclipse-${APP_LC_NAME}.git"
+GIT_FOLDER="${WORK_FOLDER}/gnu-mcu-eclipse-${APP_LC_NAME}.git"
 
 DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
 
@@ -425,10 +425,10 @@ else
     exit 1
 fi
 
-# ----- Get the GNU ARM Eclipse OpenOCD git repository. -----
+# ----- Get the GNU MCU Eclipse OpenOCD git repository. -----
 
 # The custom OpenOCD branch is available from the dedicated Git repository
-# which is part of the GNU ARM Eclipse project hosted on SourceForge.
+# which is part of the GNU MCU Eclipse project hosted on GitHub.
 # Generally this branch follows the official OpenOCD master branch,
 # with updates after every OpenOCD public release.
 
@@ -442,15 +442,15 @@ then
     # Shortcut for ilg, who has full access to the repo.
     echo
     echo "If asked, enter ${USER} GitHub password for git clone"
-    git clone -b gnuarmeclipse https://github.com/gnuarmeclipse/openocd.git gnuarmeclipse-${APP_LC_NAME}.git
+    git clone -b gnu-mcu-eclipse https://github.com/gnu-mcu-eclipse/openocd.git gnu-mcu-eclipse-${APP_LC_NAME}.git
   else
     # For regular read/only access, use the git url.
-    git clone -b gnuarmeclipse http://github.com/gnuarmeclipse/openocd.git gnuarmeclipse-${APP_LC_NAME}.git
+    git clone -b gnu-mcu-eclipse http://github.com/gnu-mcu-eclipse/openocd.git gnu-mcu-eclipse-${APP_LC_NAME}.git
   fi
 
-  # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
+  # Change to the gnu-mcu-eclipse branch. On subsequent runs use "git pull".
   cd "${GIT_FOLDER}"
-  git checkout -b gnuarmeclipse-dev origin/gnuarmeclipse-dev
+  git checkout -b gnu-mcu-eclipse-dev origin/gnu-mcu-eclipse-dev
   git submodule update --init --recursive --remote
 
   do_host_bootstrap
@@ -470,10 +470,10 @@ do_repo_action() {
     echo "Running git pull..."
   elif [ "${ACTION}" == "checkout-dev" ]
   then
-    echo "Running git checkout gnuarmeclipse-dev & pull..."
+    echo "Running git checkout gnu-mcu-eclipse-dev & pull..."
   elif [ "${ACTION}" == "checkout-stable" ]
   then
-    echo "Running git checkout gnuarmeclipse & pull..."
+    echo "Running git checkout gnu-mcu-eclipse & pull..."
   fi
 
   if [ -d "${GIT_FOLDER}" ]
@@ -488,10 +488,10 @@ do_repo_action() {
 
     if [ "${ACTION}" == "checkout-dev" ]
     then
-      git checkout gnuarmeclipse-dev
+      git checkout gnu-mcu-eclipse-dev
     elif [ "${ACTION}" == "checkout-stable" ]
     then
-      git checkout gnuarmeclipse
+      git checkout gnu-mcu-eclipse
     fi
 
     git pull --recurse-submodules
@@ -519,8 +519,8 @@ do_repo_action() {
 }
 
 # For this to work, the following settings are required:
-# git branch --set-upstream-to=origin/gnuarmeclipse-dev gnuarmeclipse-dev
-# git branch --set-upstream-to=origin/gnuarmeclipse gnuarmeclipse
+# git branch --set-upstream-to=origin/gnu-mcu-eclipse-dev gnu-mcu-eclipse-dev
+# git branch --set-upstream-to=origin/gnu-mcu-eclipse gnu-mcu-eclipse
 
 case "${ACTION}" in
   pull|checkout-dev|checkout-stable)
@@ -628,7 +628,7 @@ then
 
   cd "${WORK_FOLDER}/${LIBFTDI_FOLDER}"
   # Patch to prevent the use of system libraries and force the use of local ones.
-  patch -p0 < "${GIT_FOLDER}/gnuarmeclipse/patches/${LIBFTDI}-cmake-FindUSB1.patch"
+  patch -p0 < "${GIT_FOLDER}/gnu-mcu-eclipse/patches/${LIBFTDI}-cmake-FindUSB1.patch"
 fi
 
 # ----- Get the HDI library. -----
@@ -797,7 +797,7 @@ do
   esac
 done
 
-git_folder="${work_folder}/gnuarmeclipse-${APP_LC_NAME}.git"
+git_folder="${work_folder}/gnu-mcu-eclipse-${APP_LC_NAME}.git"
 
 echo
 uname -a
@@ -857,6 +857,11 @@ then
 
   echo "Checking makensis..."
   echo "makensis $(makensis -VERSION)"
+
+  apt-get --yes install zip
+
+  echo "Checking zip..."
+  zip -v | grep "This is Zip"
 else
   echo "Checking gcc..."
   gcc --version 2>/dev/null | egrep -e 'gcc|clang'
@@ -895,13 +900,13 @@ then
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-Wno-non-literal-null-conversion -Werror -m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/cross-pkg-config" \
+    PKG_CONFIG="${git_folder}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
     "${work_folder}/${LIBUSB1_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}"
   else
     CFLAGS="-Wno-non-literal-null-conversion -Wno-deprecated-declarations -Werror -m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/cross-pkg-config" \
+    PKG_CONFIG="${git_folder}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
     "${work_folder}/${LIBUSB1_FOLDER}/configure" \
       --prefix="${install_folder}"
   fi
@@ -976,7 +981,13 @@ then
 
   # Patch from:
   # https://gitorious.org/jtag-tools/openocd-mingw-build-scripts
-  patch -p1 < "${git_folder}/gnuarmeclipse/patches/${LIBUSB_W32}-mingw-w64.patch"
+
+  # The conversions are needed to avoid errors like:
+  # 'Hunk #1 FAILED at 31 (different line endings).'
+  dos2unix src/install.c
+  dos2unix src/install_filter_win.c
+  dos2unix src/registry.c
+  patch -p1 < "${git_folder}/gnu-mcu-eclipse/patches/${LIBUSB_W32}-mingw-w64.patch"
 
   # Build.
   CFLAGS="-Wno-unknown-pragmas -Wno-unused-variable -Wno-pointer-sign -Wno-unused-but-set-variable -Werror -m${target_bits} -pipe" \
@@ -992,7 +1003,7 @@ then
 
   mkdir -p "${install_folder}/lib/pkgconfig"
   sed -e "s|XXX|${install_folder}|" \
-    "${git_folder}/gnuarmeclipse/pkgconfig/${LIBUSB_W32}.pc" \
+    "${git_folder}/gnu-mcu-eclipse/pkgconfig/${LIBUSB_W32}.pc" \
     > "${install_folder}/lib/pkgconfig/libusb.pc"
 
   mkdir -p "${install_folder}/include/libusb"
@@ -1028,7 +1039,7 @@ then
 "${install_folder}/lib64/pkgconfig" \
     \
     cmake \
-    -DPKG_CONFIG_EXECUTABLE="${git_folder}/gnuarmeclipse/scripts/cross-pkg-config" \
+    -DPKG_CONFIG_EXECUTABLE="${git_folder}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
     -DCMAKE_TOOLCHAIN_FILE="${work_folder}/${LIBFTDI_FOLDER}/cmake/Toolchain-${cross_compile_prefix}.cmake" \
     -DCMAKE_INSTALL_PREFIX="${install_folder}" \
     -DLIBUSB_INCLUDE_DIR="${install_folder}/include/libusb-1.0" \
@@ -1132,7 +1143,7 @@ then
 
     mkdir -p "${install_folder}/lib/pkgconfig"
     sed -e "s|XXX|${install_folder}|" \
-      "${git_folder}/gnuarmeclipse/pkgconfig/${HIDAPI}-${HIDAPI_TARGET}.pc" \
+      "${git_folder}/gnu-mcu-eclipse/pkgconfig/${HIDAPI}-${HIDAPI_TARGET}.pc" \
       > "${install_folder}/lib/pkgconfig/hidapi.pc"
 
     mkdir -p "${install_folder}/include/hidapi"
@@ -1223,7 +1234,7 @@ then
     OUTPUT_DIR="${build_folder}" \
     \
     CPPFLAGS="-Werror -m${target_bits} -pipe -DGNU_MCU_ECLIPSE_RISCV" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/cross-pkg-config" \
+    PKG_CONFIG="${git_folder}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     PKG_CONFIG_PREFIX="${install_folder}" \
     \
@@ -1611,7 +1622,7 @@ then
     -exec unix2dos {} \;
 fi
 
-# ----- Copy the GNU ARM Eclipse info files. -----
+# ----- Copy the GNU MCU Eclipse info files. -----
 
 do_container_copy_info
 
@@ -1620,12 +1631,12 @@ do_container_copy_info
 
 mkdir -p "${output_folder}"
 
-if [ "${GIT_HEAD}" == "gnuarmeclipse" ]
+if [ "${GIT_HEAD}" == "gnu-mcu-eclipse" ]
 then
-  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
-elif [ "${GIT_HEAD}" == "gnuarmeclipse-dev" ]
+  distribution_file_version=$(cat "${git_folder}/gnu-mcu-eclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
+elif [ "${GIT_HEAD}" == "gnu-mcu-eclipse-dev" ]
 then
-  distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-dev
+  distribution_file_version=$(cat "${git_folder}/gnu-mcu-eclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-dev
 fi
 
 distribution_executable_name="openocd"
