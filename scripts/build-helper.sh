@@ -464,12 +464,12 @@ do_container_create_distribution() {
         distribution_archive="${distribution_folder}/gnu-mcu-eclipse-${APP_LC_NAME}-${distribution_file_version}-${target_folder}.zip"
 
         rm -rf "${install_folder}/archive/"
-        # The archive will use the 'gnu-mcu-eclipse/app/version' hierarchy.
-        mkdir -p "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
-        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
+        # The archive will use the 'GNU MCU Eclipse/app/version' hierarchy.
+        mkdir -p "${install_folder}/archive/GNU MCU Eclipse/${APP_UC_NAME}/${distribution_file_version}"
+        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/GNU MCU Eclipse/${APP_UC_NAME}/${distribution_file_version}"
 
         pushd "${install_folder}/archive"
-        zip -r -q "${distribution_archive}" gnu-mcu-eclipse
+        zip -r -q "${distribution_archive}" "GNU MCU Eclipse"
         popd
 
         pushd "$(dirname ${distribution_archive})"
@@ -481,6 +481,11 @@ do_container_create_distribution() {
         echo
 
         distribution_file="${distribution_folder}/gnu-mcu-eclipse-${APP_LC_NAME}-${distribution_file_version}-${target_folder}-setup.exe"
+
+        rm -rf "${install_folder}/archive/"
+        # The archive will use the 'gnu-mcu-eclipse/app/version' hierarchy.
+        mkdir -p "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
+        cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
 
         # Not passed as it, used by makensis for the MUI_PAGE_LICENSE; must be DOS.
         cp "${git_folder}/COPYING" \

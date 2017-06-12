@@ -44,7 +44,9 @@ IFS=$'\n\t'
 # Mandatory definition.
 APP_NAME="OpenOCD"
 
-APP_LC_NAME=$(echo "${APP_NAME}" | tr '[:upper:]' '[:lower:]')
+# Used as part of file/folder paths.
+APP_UC_NAME="OpenOCD"
+APP_LC_NAME="openocd"
 
 # On Parallels virtual machines, prefer host Work folder.
 # Second choice are Work folders on secondary disks.
@@ -698,6 +700,7 @@ cat <<EOF >> "${script_file}"
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
+APP_UC_NAME="${APP_UC_NAME}"
 GIT_HEAD="${GIT_HEAD}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
 
