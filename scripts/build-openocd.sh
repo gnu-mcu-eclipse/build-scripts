@@ -1236,7 +1236,7 @@ then
     # Be sure all these lines end in '\' to ensure lines are concatenated.
     OUTPUT_DIR="${build_folder}" \
     \
-    CPPFLAGS="-Werror -m${target_bits} -pipe -DGNU_MCU_ECLIPSE_RISCV" \
+    CPPFLAGS="-Werror -m${target_bits} -pipe" \
     PKG_CONFIG="${git_folder}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     PKG_CONFIG_PREFIX="${install_folder}" \
@@ -1253,6 +1253,8 @@ then
     --disable-wextra \
     --disable-werror \
     --enable-dependency-tracking \
+    \
+    --enable-branding="GNU MCU Eclipse" \
     \
     --enable-aice \
     --enable-amtjtagaccel \
@@ -1278,6 +1280,7 @@ then
     --enable-parport-giveio \
     --enable-presto \
     --enable-remote-bitbang \
+    --enable-riscv \
     --enable-rlink \
     --enable-stlink \
     --disable-sysfsgpio \
@@ -1308,7 +1311,7 @@ then
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
     # On some machines libftdi ends in lib64, so we refer both lib & lib64
-    CPPFLAGS="-m${target_bits} -pipe -DGNU_MCU_ECLIPSE_RISCV" \
+    CPPFLAGS="-m${target_bits} -pipe" \
     LDFLAGS='-Wl,-lpthread' \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
@@ -1325,6 +1328,8 @@ then
     --disable-wextra \
     --disable-werror \
     --enable-dependency-tracking \
+    \
+    --enable-branding="GNU MCU Eclipse" \
     \
     --enable-aice \
     --enable-amtjtagaccel \
@@ -1350,6 +1355,7 @@ then
     --enable-parport-giveio \
     --enable-presto \
     --enable-remote-bitbang \
+    --enable-riscv \
     --enable-rlink \
     --enable-stlink \
     --enable-sysfsgpio \
@@ -1382,7 +1388,7 @@ then
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
-    CPPFLAGS="-Werror -m${target_bits} -pipe -DGNU_MCU_ECLIPSE_RISCV" \
+    CPPFLAGS="-Werror -m${target_bits} -pipe" \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
     \
@@ -1398,6 +1404,8 @@ then
     --disable-wextra \
     --disable-werror \
     --enable-dependency-tracking \
+    \
+    --enable-branding="GNU MCU Eclipse" \
     \
     --enable-aice \
     --disable-amtjtagaccel \
@@ -1423,6 +1431,7 @@ then
     --disable-parport-giveio \
     --enable-presto \
     --enable-remote-bitbang \
+    --enable-riscv \
     --enable-rlink \
     --enable-stlink \
     --disable-sysfsgpio \
