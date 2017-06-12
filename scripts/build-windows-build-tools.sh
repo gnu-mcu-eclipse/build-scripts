@@ -36,7 +36,7 @@ IFS=$'\n\t'
 # Prerequisites:
 #
 #   Docker
-#   curl, git, automake, patch, tar, unzip
+#   curl, git, automake, patch, tar, unzip, zip
 #
 # When running on OS X, a custom Homebrew is required to provide the 
 # missing libraries and TeX binaries.
@@ -45,7 +45,9 @@ IFS=$'\n\t'
 # Mandatory definitions.
 APP_NAME="Windows Build Tools"
 
+# Used as part of file/folder paths.
 APP_LC_NAME="build-tools"
+APP_UC_NAME="Build Tools"
 
 # On Parallels virtual machines, prefer host Work folder.
 # Second choice are Work folders on secondary disks.
@@ -109,7 +111,7 @@ do
       ;;
 
     --help)
-      echo "Build the GNU ARM Eclipse ${APP_NAME} distributions."
+      echo "Build the GNU MCU Eclipse ${APP_NAME} distributions."
       echo "Usage:"
       echo "    bash $0 [--helper-script file.sh] [--win32] [--win64] [--all] [clean|cleanall|pull|checkput-dev|checkout-stable|build-images] [--help]"
       echo
@@ -151,7 +153,7 @@ then
   then
     # Download helper script from GitHub git.
     echo "Downloading helper script..."
-    curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
+    curl -L "https://github.com/gnu-mcu-eclipse/build-scripts/raw/master/scripts/build-helper.sh" \
       --output "${WORK_FOLDER}/scripts/build-helper.sh"
     helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
   else
@@ -186,13 +188,13 @@ source "$helper_script"
 MSYS2_MAKE_PACK_URL_BASE="http://sourceforge.net/projects/msys2/files"
 
 # http://sourceforge.net/projects/msys2/files/REPOS/MSYS2/Sources/
-# http://sourceforge.net/projects/msys2/files/REPOS/MSYS2/Sources/make-4.1-3.src.tar.gz/download
+# http://sourceforge.net/projects/msys2/files/REPOS/MSYS2/Sources/make-4.1-4.src.tar.gz/download
 
 MAKE_VERSION="4.1"
 MSYS2_MAKE_VERSION_RELEASE="${MAKE_VERSION}-4"
 
-# 4.2 does not build on Debian 8, it requires gettext-0.19.4.
-# MAKE_VERSION="4.2"
+# Warning! 4.2 does not build on Debian 8, it requires gettext-0.19.4.
+# MAKE_VERSION="4.2.1"
 # MSYS2_MAKE_VERSION_RELEASE="${MAKE_VERSION}-1"
 
 MSYS2_MAKE_PACK_ARCH="make-${MSYS2_MAKE_VERSION_RELEASE}.src.tar.gz"
@@ -202,11 +204,12 @@ MSYS2_MAKE_PACK_URL="${MSYS2_MAKE_PACK_URL_BASE}/REPOS/MSYS2/Sources/${MSYS2_MAK
 # http://intgat.tigress.co.uk/rmy/busybox/index.html
 # https://github.com/rmyorston/busybox-w32
 
+# BUSYBOX_COMMIT=master
 # BUSYBOX_COMMIT="9fe16f6102d8ab907c056c484988057904092c06"
 # BUSYBOX_COMMIT="977d65c1bbc57f5cdd0c8bfd67c8b5bb1cd390dd"
-BUSYBOX_COMMIT="9fa1e4990e655a85025c9d270a1606983e375e47"
+# BUSYBOX_COMMIT="9fa1e4990e655a85025c9d270a1606983e375e47"
+BUSYBOX_COMMIT="c2002eae394c230d6b89073c9ff71bc86a7875e8"
 
-# BUSYBOX_COMMIT=master
 BUSYBOX_ARCHIVE="${BUSYBOX_COMMIT}.zip"
 BUSYBOX_URL="https://github.com/rmyorston/busybox-w32/archive/${BUSYBOX_ARCHIVE}"
 
@@ -253,7 +256,7 @@ do_host_detect
 
 # ----- Define build constants. -----
 
-GIT_FOLDER="${WORK_FOLDER}/gnuarmeclipse-${APP_LC_NAME}.git"
+GIT_FOLDER="${WORK_FOLDER}/gnu-mcu-eclipse-${APP_LC_NAME}.git"
 
 DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
 
@@ -328,10 +331,10 @@ tar --version
 echo "Checking host unzip..."
 unzip | grep UnZip
 
-# ----- Get the GNU ARM Eclipse Build Tools git repository. -----
+# ----- Get the GNU MCU Eclipse Build Tools git repository. -----
 
 # The custom Build Tools is available from the dedicated Git repository
-# which is part of the GNU ARM Eclipse project hosted on SourceForge.
+# which is part of the GNU MCU Eclipse project hosted on SourceForge.
 
 if [ ! -d "${GIT_FOLDER}" ]
 then
@@ -343,10 +346,10 @@ then
     # Shortcut for ilg, who has full access to the repo.
     echo
     echo "If asked, enter ${USER} GitHub password for git clone"
-    git clone https://github.com/gnuarmeclipse/build-tools.git gnuarmeclipse-${APP_LC_NAME}.git
+    git clone https://github.com/gnu-mcu-eclipse/build-tools.git gnu-mcu-eclipse-${APP_LC_NAME}.git
   else
     # For regular read/only access, use the git url.
-    git clone http://github.com/gnuarmeclipse/build-tools.git gnuarmeclipse-${APP_LC_NAME}.git
+    git clone http://github.com/gnu-mcu-eclipse/build-tools.git gnu-mcu-eclipse-${APP_LC_NAME}.git
   fi
 
 fi
@@ -443,6 +446,7 @@ cat <<EOF >> "${script_file}"
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
+APP_UC_NAME="${APP_UC_NAME}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
 
 MAKE_VERSION="${MAKE_VERSION}"
@@ -537,7 +541,7 @@ do
   esac
 done
 
-git_folder="${work_folder}/gnuarmeclipse-${APP_LC_NAME}.git"
+git_folder="${work_folder}/gnu-mcu-eclipse-${APP_LC_NAME}.git"
 
 echo
 uname -a
@@ -586,6 +590,11 @@ echo "makensis $(makensis -VERSION)"
 
 echo "Checking shasum..."
 shasum --version
+
+apt-get --yes install zip
+
+echo "Checking zip..."
+zip -v | grep "This is Zip"
 
 # ----- Remove and recreate the output folder. -----
 
@@ -683,19 +692,19 @@ then
     cd "${busybox_build_folder}/configs"
     sed \
     -e 's/CONFIG_CROSS_COMPILER_PREFIX=".*"/CONFIG_CROSS_COMPILER_PREFIX="i686-w64-mingw32-"/' \
-    <mingw32_defconfig >gnuarmeclipse_32_mingw_defconfig
+    <mingw32_defconfig >gnu-mcu-eclipse_32_mingw_defconfig
 
     sed \
     -e 's/CONFIG_CROSS_COMPILER_PREFIX=".*"/CONFIG_CROSS_COMPILER_PREFIX="x86_64-w64-mingw32-"/' \
-    <mingw32_defconfig >gnuarmeclipse_64_mingw_defconfig
+    <mingw32_defconfig >gnu-mcu-eclipse_64_mingw_defconfig
 
   fi
 
   echo 
-  echo "Running BusyBox make gnuarmeclipse_${target_bits}_mingw_defconfig..."
+  echo "Running BusyBox make gnu-mcu-eclipse_${target_bits}_mingw_defconfig..."
 
   cd "${busybox_build_folder}"
-  make "gnuarmeclipse_${target_bits}_mingw_defconfig"
+  make "gnu-mcu-eclipse_${target_bits}_mingw_defconfig"
 
 fi
 
@@ -747,36 +756,36 @@ find "${install_folder}/${APP_LC_NAME}/license" -type f \
   -exec unix2dos {} \;
 
 
-# ----- Copy the GNU ARM Eclipse info files. -----
+# ----- Copy the GNU MCU Eclipse info files. -----
 
 echo 
 echo "Copying info files..."
 
-mkdir -p "${install_folder}/build-tools/gnuarmeclipse"
+mkdir -p "${install_folder}/build-tools/gnu-mcu-eclipse"
 
-cp -v "${git_folder}/gnuarmeclipse/info/INFO.txt" \
+cp -v "${git_folder}/gnu-mcu-eclipse/info/INFO.txt" \
   "${install_folder}/build-tools/INFO.txt"
 do_unix2dos "${install_folder}/build-tools/INFO.txt"
-cp -v "${git_folder}/gnuarmeclipse/info/BUILD.txt" \
-  "${install_folder}/build-tools/gnuarmeclipse/BUILD.txt"
-do_unix2dos "${install_folder}/build-tools/gnuarmeclipse/BUILD.txt"
-cp -v "${git_folder}/gnuarmeclipse/info/CHANGES.txt" \
-  "${install_folder}/build-tools/gnuarmeclipse/"
-do_unix2dos "${install_folder}/build-tools/gnuarmeclipse/CHANGES.txt"
+cp -v "${git_folder}/gnu-mcu-eclipse/info/BUILD.txt" \
+  "${install_folder}/build-tools/gnu-mcu-eclipse/BUILD.txt"
+do_unix2dos "${install_folder}/build-tools/gnu-mcu-eclipse/BUILD.txt"
+cp -v "${git_folder}/gnu-mcu-eclipse/info/CHANGES.txt" \
+  "${install_folder}/build-tools/gnu-mcu-eclipse/"
+do_unix2dos "${install_folder}/build-tools/gnu-mcu-eclipse/CHANGES.txt"
 
 # Copy the current build script
 cp -v "${work_folder}/scripts/build-${APP_LC_NAME}.sh" \
-  "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/build-${APP_LC_NAME}.sh"
-do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/build-${APP_LC_NAME}.sh"
+  "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-${APP_LC_NAME}.sh"
+do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-${APP_LC_NAME}.sh"
 
 # Copy the current build helper script
 cp -v "${work_folder}/scripts/build-helper.sh" \
-  "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/build-helper.sh"
-do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/build-helper.sh"
+  "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-helper.sh"
+do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-helper.sh"
 
 cp -v "${output_folder}/config.log" \
-  "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/config.log"
-do_unix2dos "${install_folder}/${APP_LC_NAME}/gnuarmeclipse/config.log"
+  "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/config.log"
+do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/config.log"
 
 # Not passed as is, used by makensis for the MUI_PAGE_LICENSE; must be DOS.
 cp -v "${git_folder}/COPYING" \
@@ -788,50 +797,11 @@ do_unix2dos "${install_folder}/build-tools/COPYING"
 
 mkdir -p "${output_folder}"
 
-echo
-echo "Creating setup..."
-echo
+distribution_file_version=$(cat "${git_folder}/gnu-mcu-eclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
 
-distribution_file_version=$(cat "${git_folder}/gnuarmeclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
-distribution_file="${distribution_folder}/gnuarmeclipse-${APP_LC_NAME}-${target_folder}-${distribution_file_version}-setup.exe"
+distribution_executable_name="make"
 
-# Not passed as it, used by makensis for the MUI_PAGE_LICENSE; must be DOS.
-cp "${git_folder}/COPYING" \
-  "${install_folder}/${APP_LC_NAME}/COPYING"
-do_unix2dos "${install_folder}/${APP_LC_NAME}/COPYING"
-
-nsis_folder="${git_folder}/gnuarmeclipse/nsis"
-nsis_file="${nsis_folder}/gnuarmeclipse-${APP_LC_NAME}.nsi"
-
-cd "${build_folder}"
-makensis -V4 -NOCD \
-  -DINSTALL_FOLDER="${install_folder}/${APP_LC_NAME}" \
-  -DNSIS_FOLDER="${nsis_folder}" \
-  -DOUTFILE="${distribution_file}" \
-  -DW${target_bits} \
-  -DBITS=${target_bits} \
-  -DVERSION=${distribution_file_version} \
-  "${nsis_file}"
-result="$?"
-
-pushd "$(dirname ${distribution_file})"
-do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
-popd
-
-if [ "${host_uname}" == "Linux" ]
-then
-  # Set the owner of the folder and files created by the docker debian 
-  # container to match the user running the build script on the host. 
-  # When run on linux host, these folders and their content remain owned 
-  # by root if this is not done. However, when host is osx (mac os), the 
-  # owner produced by boot2docker is the same as the osx user, so an 
-  # ownership change is not done. 
-  echo
-  echo "Changing owner to non-root Linux user..."
-  chown -R ${user_id}:${group_id} ${work_folder}/build
-  chown -R ${user_id}:${group_id} ${work_folder}/install
-  chown -R ${user_id}:${group_id} ${work_folder}/output
-fi
+do_container_create_distribution
 
 # Requires ${distribution_file} and ${result}
 do_container_completed
