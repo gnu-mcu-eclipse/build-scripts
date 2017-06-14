@@ -485,7 +485,7 @@ do_repo_action() {
 
       echo "Not implemented."
       exit 1
-      
+
     fi
 
     exit 0
@@ -839,11 +839,16 @@ then
 
   fi
 
+  jobs="--jobs=8"
+
   echo
   echo "Running make binutils..."
   make clean
-  make -j 6
-  make install
+  make "${jobs}" all
+  make "${jobs}" install
+  make "${jobs}" install-pdf
+
+  # The binutils were successfuly created.
   touch "${binutils_stamp_file}"
 
 fi
@@ -1080,11 +1085,19 @@ fi
 
 # ----- Copy dynamic libraries to the install bin folder. -----
 
+checking_stamp_file="${build_folder_path}/stamp_check_completed"
+
+if [ ! -f "${checking_stamp_file}" ]
+then
+
 if [ "${target_name}" == "win" ]
 then
 
   if [ -z "${do_no_strip}" ]
   then
+    echo
+    echo "Striping executables..."
+
     ${cross_compile_prefix}-strip \
       "${install_folder}/${APP_LC_NAME}/bin"/*.exe
   fi
@@ -1111,18 +1124,36 @@ then
 
   if [ -z "${do_no_strip}" ]
   then
+    echo
+    echo "Striping DLLs..."
+
     ${cross_compile_prefix}-strip "${install_folder}/${APP_LC_NAME}/bin/"*.dll
   fi
+
+  (
+    cd "${install_folder}/${APP_LC_NAME}/bin"
+    for f in *
+    do
+      if [ -x "${f}" ]
+      then
+        do_container_win_check_libs "${f}"
+      fi
+    done
+  )
+
 
 elif [ "${target_name}" == "debian" ]
 then
 
   if [ -z "${do_no_strip}" ]
   then
+    echo
+    echo "Striping executables..."
+
     strip "${install_folder}/${APP_LC_NAME}/bin"/*
   fi
 
-  # This is a very important detail: 'patchelf' sets "runpath"
+  # Generally this is a very important detail: 'patchelf' sets "runpath"
   # in the ELF file to $ORIGIN, telling the loader to search
   # for the libraries first in LD_LIBRARY_PATH (if set) and, if not found there,
   # to look in the same folder where the executable is located -- where
@@ -1139,8 +1170,13 @@ then
   # Also, runpath is added to the installed library files using patchelf, with 
   # value $ORIGIN, in the same way. See patchelf usage in build-helper.sh.
   #
+  # In particular for GCC there are no shared libraries.
+
   find "${install_folder}/${APP_LC_NAME}/bin" -type f -executable \
-    -exec patchelf --debug --set-rpath '$ORIGIN' "{}" \;
+      -exec patchelf --debug --set-rpath '$ORIGIN' "{}" \;
+
+if false
+then
 
   echo
   echo "Copying shared libs..."
@@ -1153,9 +1189,6 @@ then
     distro_machine="i386"
   fi
 
-if false
-then
-
   do_container_linux_copy_user_so libusb-1.0
   do_container_linux_copy_user_so libusb-0.1
   do_container_linux_copy_user_so libftdi1
@@ -1166,74 +1199,90 @@ then
 
 fi
 
+  (
+    cd "${install_folder}/${APP_LC_NAME}/bin"
+    for f in *
+    do
+      if [ -x "${f}" ]
+      then
+        do_container_linux_check_libs "${f}"
+      fi
+    done
+  )
+
 elif [ "${target_name}" == "osx" ]
 then
 
   if [ -z "${do_no_strip}" ]
   then
+    echo
+    echo "Striping executables..."
+
     strip "${install_folder}/${APP_LC_NAME}/bin"/*
   fi
 
-  echo
-  echo "Copying dynamic libs..."
-
-  # Post-process dynamic libraries paths to be relative to executable folder.
-
-  # ILIB=openocd
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/riscv64-unknown-elf-gdb"
-
-if false
-then
-
-  install_name_tool -change "libftdi1.2.dylib" "@executable_path/libftdi1.2.dylib" \
-    "${install_folder}/${APP_LC_NAME}/bin/openocd"
-  do_container_mac_change_built_lib libusb-1.0.0.dylib
-  do_container_mac_change_built_lib libusb-0.1.4.dylib
-  do_container_mac_change_built_lib libhidapi.0.dylib
-  do_container_mac_check_lib
-
-  do_container_mac_copy_built_lib libftdi1.2.dylib
-  do_container_mac_change_built_lib libusb-1.0.0.dylib
-  do_container_mac_check_lib
-
-  do_container_mac_copy_built_lib libusb-0.1.4.dylib
-  do_container_mac_change_built_lib libusb-1.0.0.dylib
-  do_container_mac_check_lib
-
-  do_container_mac_copy_built_lib libusb-1.0.0.dylib
-  do_container_mac_check_lib
-
-  do_container_mac_copy_built_lib libhidapi.0.dylib
-  do_container_mac_check_lib
+  (
+    cd "${install_folder}/${APP_LC_NAME}/bin"
+    for f in *
+    do
+      if [ -x "${f}" ]
+      then
+        do_container_mac_check_libs "${f}"
+      fi
+    done
+  )
 
 fi
 
+touch "${checking_stamp_file}"
 fi
 
 # ----- Copy the license files. -----
 
-echo
-echo "Copying license files..."
+license_stamp_file="${build_folder_path}/stamp_license_completed"
 
-do_container_copy_license "${work_folder_path}/${BINUTILS_FOLDER_NAME}" "${binutils_folder}"
-do_container_copy_license "${work_folder_path}/${GCC_FOLDER_NAME}" "${gcc_folder}"
-do_container_copy_license "${work_folder_path}/${NEWLIB_FOLDER_NAME}" "${newlib_folder}"
-
-if [ "${target_name}" == "win" ]
+if [ ! -f "${license_stamp_file}" ]
 then
-  # For Windows, process cr lf
-  find "${install_folder}/${APP_LC_NAME}/license" -type f \
-    -exec unix2dos {} \;
+
+  echo
+  echo "Copying license files..."
+
+  do_container_copy_license \
+    "${work_folder_path}/${BINUTILS_FOLDER_NAME}" "${binutils_folder}"
+  do_container_copy_license \
+    "${work_folder_path}/${GCC_FOLDER_NAME}" "${gcc_folder}"
+  do_container_copy_license \
+    "${work_folder_path}/${NEWLIB_FOLDER_NAME}" "${newlib_folder}"
+
+  if [ "${target_name}" == "win" ]
+  then
+    # For Windows, process cr lf
+    find "${install_folder}/${APP_LC_NAME}/license" -type f \
+      -exec unix2dos {} \;
+  fi
+
+  touch "${license_stamp_file}"
+
 fi
 
 # ----- Copy the GNU MCU Eclipse info files. -----
 
-do_container_copy_info
+info_stamp_file="${build_folder_path}/stamp_info_completed"
 
-/usr/bin/install -cv -m 644 \
-  "${build_folder_path}/${binutils_folder}/configure-output.txt" \
-  "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/binutils-configure-output.txt"
-do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/binutils-configure-output.txt"
+if [ ! -f "${info_stamp_file}" ]
+then
+
+  do_container_copy_info
+
+  /usr/bin/install -cv -m 644 \
+    "${build_folder_path}/${binutils_folder}/configure-output.txt" \
+    "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/binutils-configure-output.txt"
+
+  do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/binutils-configure-output.txt"
+
+  touch "${info_stamp_file}"
+
+fi
 
 # ----- Create the distribution package. -----
 

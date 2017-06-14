@@ -900,6 +900,28 @@ do_container_linux_copy_librt_so() {
   fi
 }
 
+# v===========================================================================v
+do_container_linux_check_libs() {
+
+  local fn
+  if [ $# -gt 0 ]
+  then
+    fn=$1
+  else
+    fn=${ILIB}
+  fi
+
+  echo "${fn}"
+  readelf -d "${fn}" | egrep -i 'library|dynamic'
+  set +e
+  local unxp=$(readelf -d "${fn}" | egrep -i 'library|dynamic' | grep -e "NEEDED" | grep -e "macports" -e "homebrew" -e "opt" -e "install")
+  set -e
+  #echo "|${unxp}|"
+  if [ ! -z "$unxp" ]
+  then
+     exit 1
+  fi
+}
 
 # v===========================================================================v
 # $1 = dll name
@@ -959,6 +981,30 @@ do_container_win_copy_libwinpthread_dll() {
     echo "Searching /usr for libwinpthread-1.dll..."
     PTHREAD_PATH=$(find /usr \! -readable -prune -o -name 'libwinpthread-1.dll' -print | grep ${cross_compile_prefix})
     cp -v "${PTHREAD_PATH}" "${install_folder}/${APP_LC_NAME}/bin"
+  fi
+}
+
+# v===========================================================================v
+do_container_win_check_libs() {
+
+  local fn
+  if [ $# -gt 0 ]
+  then
+    fn=$1
+  else
+    fn=${ILIB}
+  fi
+
+  echo "${fn}"
+  ${cross_compile_prefix}-objdump -x "${install_folder}/${APP_LC_NAME}/bin/${fn}" | grep -i 'DLL Name'
+
+  set +e
+  local unxp=$(${cross_compile_prefix}-objdump -x "${install_folder}/${APP_LC_NAME}/bin/${fn}" | grep -i 'DLL Name' | grep -e "macports" -e "homebrew" -e "opt" -e "install")
+  set -e
+  #echo "|${unxp}|"
+  if [ ! -z "$unxp" ]
+  then
+    exit 1
   fi
 }
 
@@ -1024,10 +1070,20 @@ do_container_mac_copy_lib() {
 }
 
 # v===========================================================================v
-do_container_mac_check_lib() {
+do_container_mac_check_libs() {
 
-  otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}"
-  local unxp=$(otool -L "${install_folder}/${APP_LC_NAME}/bin/${ILIB}" | sed '1d' | grep -e "macports" -e "homebrew" -e "opt" -e "install")
+  local fn
+  if [ $# -gt 0 ]
+  then
+    fn=$1
+  else
+    fn=${ILIB}
+  fi
+
+  otool -L "${install_folder}/${APP_LC_NAME}/bin/${fn}"
+  set +e
+  local unxp=$(otool -L "${install_folder}/${APP_LC_NAME}/bin/${fn}" | sed '1d' | grep -e "macports" -e "homebrew" -e "opt" -e "install")
+  set -e
   # echo "|${unxp}|"
   if [ ! -z "$unxp" ]
   then
