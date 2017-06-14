@@ -84,7 +84,7 @@ do_host_detect() {
 
 
       # When running on Docker, the host Work folder is used, if available.
-      HOST_WORK_FOLDER="${WORK_FOLDER}/../../Host/Work/${APP_LC_NAME}"
+      HOST_WORK_FOLDER="${WORK_FOLDER_PATH}/../../Host/Work/${APP_LC_NAME}"
 
       DOCKER_HOST_WORK="/Host/Work/${APP_LC_NAME}"
       DOCKER_GIT_FOLDER="${DOCKER_HOST_WORK}/${APP_LC_NAME}.git"
@@ -166,6 +166,77 @@ do_host_prepare_prerequisites() {
 }
 
 # v===========================================================================v
+do_host_prepare_prerequisites_riscv() {
+
+      caffeinate=""
+      if [ "${HOST_UNAME}" == "Darwin" ]
+      then
+        caffeinate="caffeinate"
+
+        local hb_folder="$HOME/opt/homebrew-rv"
+        local tl_folder="$HOME/opt/texlive"
+
+        # Check local Homebrew.
+        if [ -d "${hb_folder}" ]
+        then
+
+          PATH="${hb_folder}/bin":$PATH
+          export PATH
+
+          echo
+          echo "Checking Homebrew in '${hb_folder}'..."
+          set +e
+          brew --version | grep 'Homebrew '
+          if [ $? != 0 ]
+          then
+            echo "Please install Homebrew and rerun."
+            echo 
+            echo "mkdir -p \${HOME}/opt"
+            echo "git clone https://github.com/ilg-ul/opt-install-scripts \${HOME}/opt/install-scripts.git"
+            echo "bash \${HOME}/opt/install-scripts.git/install-homebrew-rv.sh"
+            exit 1
+          fi
+          set -e
+
+        fi
+
+        # Check local TeX Live.
+        if [ -d "${tl_folder}" ]
+        then
+
+          PATH="${tl_folder}/bin/x86_64-darwin":$PATH
+          export PATH
+
+          echo
+          echo "Checking TeX Live in '${tl_folder}'..."
+          set +e
+          tex --version | grep 'TeX 3'
+          if [ $? != 0 ]
+          then
+            echo "Please install TeX Live and rerun."
+            echo 
+            echo "mkdir -p \${HOME}/opt"
+            echo "git clone https://github.com/ilg-ul/opt-install-scripts \${HOME}/opt/install-scripts.git"
+            echo "bash \${HOME}/opt/install-scripts.git/install-texlive.sh"
+            exit 1
+          fi
+          set -e
+
+        fi
+
+
+      fi
+
+      echo
+      echo "Checking host curl..."
+      curl --version | grep curl
+
+      echo
+      echo "Checking host git..."
+      git --version
+}
+
+# v===========================================================================v
 do_host_prepare_docker() {
 
       echo
@@ -191,7 +262,7 @@ do_host_get_git_head() {
 
       # Get the current Git branch name, to know if we are building the stable or
       # the development release.
-      cd "${GIT_FOLDER}"
+      cd "${PROJECT_GIT_FOLDER_PATH}"
       set +e
       GIT_HEAD=$(git symbolic-ref -q --short HEAD)
       if [ $? -eq 1 ]
@@ -289,14 +360,14 @@ do_host_build_target() {
       --script "${script_file}" \
       --host-uname "${HOST_UNAME}" \
       -- \
-      --build-folder "${WORK_FOLDER}/build/${target_folder}" \
+      --build-folder "${WORK_FOLDER_PATH}/build/${target_folder}" \
       --target-name "${target_name}" \
-      --output-folder "${WORK_FOLDER}/output/${target_folder}" \
-      --distribution-folder "${WORK_FOLDER}/output" \
-      --install-folder "${WORK_FOLDER}/install/${target_folder}" \
-      --download-folder "${WORK_FOLDER}/download" \
-      --helper-script "${WORK_FOLDER}/scripts/build-helper.sh" \
-      --work-folder "${WORK_FOLDER}" \
+      --output-folder "${WORK_FOLDER_PATH}/output/${target_folder}" \
+      --distribution-folder "${WORK_FOLDER_PATH}/output" \
+      --install-folder "${WORK_FOLDER_PATH}/install/${target_folder}" \
+      --download-folder "${WORK_FOLDER_PATH}/download" \
+      --helper-script "${WORK_FOLDER_PATH}/scripts/build-helper.sh" \
+      --work-folder "${WORK_FOLDER_PATH}" \
       --host-uname "${HOST_UNAME}"
 
   fi
@@ -308,11 +379,11 @@ do_host_build_target() {
 do_host_show_sha() {
 
   # ---- Prevent script break because of not found SHA file without arguments ----
-  mkdir -p ${WORK_FOLDER}/output
-  echo "" > ${WORK_FOLDER}/output/empty.sha
+  mkdir -p ${WORK_FOLDER_PATH}/output
+  echo "" > ${WORK_FOLDER_PATH}/output/empty.sha
   # ----
 
-  cat "${WORK_FOLDER}/output/"*.sha
+  cat "${WORK_FOLDER_PATH}/output/"*.sha
 
 }
 
@@ -359,7 +430,7 @@ run_docker_script() {
     --tty \
     --hostname "docker" \
     --workdir="/root" \
-    --volume="${WORK_FOLDER}/..:/Host/Work" \
+    --volume="${WORK_FOLDER_PATH}/..:/Host/Work" \
     ${docker_image} \
     /bin/bash ${DEBUG} "${docker_script}" \
       --docker-container-name "${docker_container_name}" \
@@ -422,33 +493,39 @@ do_container_copy_info() {
       echo
       echo "Copying info files..."
 
-      /usr/bin/install -cv -m 644 "${git_folder}/gnu-mcu-eclipse/info/INFO-${generic_target_name}.txt" \
+      /usr/bin/install -cv -m 644 "${git_folder_path}/gnu-mcu-eclipse/info/INFO-${generic_target_name}.txt" \
         "${install_folder}/${APP_LC_NAME}/INFO.txt"
       do_unix2dos "${install_folder}/${APP_LC_NAME}/INFO.txt"
 
       mkdir -p "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse"
 
-      /usr/bin/install -cv -m 644 "${git_folder}/gnu-mcu-eclipse/info/BUILD-${generic_target_name}.txt" \
+      /usr/bin/install -cv -m 644 "${git_folder_path}/gnu-mcu-eclipse/info/BUILD-${generic_target_name}.txt" \
         "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/BUILD.txt"
       do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/BUILD.txt"
 
-      /usr/bin/install -cv -m 644 "${git_folder}/gnu-mcu-eclipse/info/CHANGES.txt" \
+      /usr/bin/install -cv -m 644 "${git_folder_path}/gnu-mcu-eclipse/info/CHANGES.txt" \
         "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/CHANGES.txt"
       do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/CHANGES.txt"
 
       # Copy the current build script
-      /usr/bin/install -cv -m 644 "${work_folder}/scripts/build-${APP_LC_NAME}.sh" \
+      /usr/bin/install -cv -m 644 "${work_folder_path}/scripts/build-${APP_LC_NAME}.sh" \
         "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-${APP_LC_NAME}.sh"
       do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-${APP_LC_NAME}.sh"
 
       # Copy the current build helper script
-      /usr/bin/install -cv -m 644 "${work_folder}/scripts/build-helper.sh" \
+      /usr/bin/install -cv -m 644 "${work_folder_path}/scripts/build-helper.sh" \
         "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-helper.sh"
       do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/build-helper.sh"
 
-      /usr/bin/install -cv -m 644 "${output_folder}/config.log" \
+      if [ -f "${output_folder_path}/config.log" ]
+      then
+        echo move me to application!
+        exit 1
+
+        /usr/bin/install -cv -m 644 "${output_folder_path}/config.log" \
         "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/config.log"
-      do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/config.log"
+        do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/config.log"
+      fi
 }
 
 # v===========================================================================v
@@ -488,14 +565,24 @@ do_container_create_distribution() {
         cp -r "${install_folder}/${APP_LC_NAME}"/* "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}"
 
         # Not passed as it, used by makensis for the MUI_PAGE_LICENSE; must be DOS.
-        cp "${git_folder}/COPYING" \
-          "${install_folder}/${APP_LC_NAME}/COPYING"
+        if [ -f "${git_folder_path}/COPYING" ]
+        then
+          cp "${git_folder_path}/COPYING" \
+            "${install_folder}/${APP_LC_NAME}/COPYING"
+        elif [ -f "${git_folder_path}/LICENSE" ]
+        then
+          cp "${git_folder_path}/LICENSE" \
+            "${install_folder}/${APP_LC_NAME}/COPYING"
+        else
+          echo "Missing LICENSE or COPYING"
+          exit 1
+        fi
         unix2dos "${install_folder}/${APP_LC_NAME}/COPYING"
 
-        nsis_folder="${git_folder}/gnu-mcu-eclipse/nsis"
-        nsis_file="${nsis_folder}/gnu-mcu-eclipse-${APP_LC_NAME}.nsi"
+        nsis_folder="${git_folder_path}/gnu-mcu-eclipse/nsis"
+        nsis_file="${nsis_folder}/gnu-mcu-eclipse.nsi"
 
-        cd "${build_folder}"
+        cd "${build_folder_path}"
         makensis -V4 -NOCD \
           -DINSTALL_FOLDER="${install_folder}/${APP_LC_NAME}" \
           -DNSIS_FOLDER="${nsis_folder}" \
@@ -575,29 +662,9 @@ do_container_create_distribution() {
       then
 
         echo
-        echo "Creating installer package..."
+        echo "Creating archive..."
         echo
 
-        distribution_file="${distribution_folder}/gnu-mcu-eclipse-${APP_LC_NAME}-${distribution_file_version}-${target_folder}.pkg"
-
-        distribution_install_folder=${distribution_install_folder:-"/Applications/GNU MCU Eclipse/${APP_NAME}"}
-
-        # Create the installer package, with content from the
-        # ${distribution_install_folder}/${APP_LC_NAME} folder.
-        # The ID includes the version, which is a kludge to prevent the
-        # installer to remove preious versions.
-        # The "${distribution_install_folder:1}" is a substring that skips first char.
-        cd "${work_folder}"
-        pkgbuild \
-          --root "${install_folder}/${APP_LC_NAME}" \
-          --identifier "ilg.gnu-mcu-eclipse.${APP_LC_NAME}.${DISTRIBUTION_FILE_DATE}" \
-          --install-location "${distribution_install_folder:1}/${distribution_file_version}" \
-          "${distribution_file}"
-
-        pushd "$(dirname ${distribution_file})"
-        do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
-        popd
-        
         distribution_archive="${distribution_folder}/gnu-mcu-eclipse-${APP_LC_NAME}-${distribution_file_version}-${target_folder}.tgz"
 
         rm -rf "${install_folder}/archive/"
@@ -612,6 +679,31 @@ do_container_create_distribution() {
         pushd "$(dirname ${distribution_archive})"
         do_compute_sha shasum -a 256 -p "$(basename ${distribution_archive})"
         popd
+
+        echo
+        echo "Creating installer package..."
+        echo
+
+        distribution_file="${distribution_folder}/gnu-mcu-eclipse-${APP_LC_NAME}-${distribution_file_version}-${target_folder}.pkg"
+
+        distribution_install_folder=${distribution_install_folder:-"/Applications/GNU MCU Eclipse/${APP_NAME}"}
+
+        # Create the installer package, with content from the
+        # ${distribution_install_folder}/${APP_LC_NAME} folder.
+        # The ID includes the version, which is a kludge to prevent the
+        # installer to remove preious versions.
+        # The "${distribution_install_folder:1}" is a substring that skips first char.
+        cd "${work_folder_path}"
+        pkgbuild \
+          --root "${install_folder}/${APP_LC_NAME}" \
+          --identifier "ilg.gnu-mcu-eclipse.${APP_LC_NAME}.${DISTRIBUTION_FILE_DATE}" \
+          --install-location "${distribution_install_folder:1}/${distribution_file_version}" \
+          "${distribution_file}"
+
+        pushd "$(dirname ${distribution_file})"
+        do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
+        popd
+        
 
         echo
         ls -l "${install_folder}/${APP_LC_NAME}/bin"
@@ -633,9 +725,9 @@ do_container_create_distribution() {
         # ownership change is not done. 
         echo
         echo "Changing owner to non-root Linux user..."
-        chown -R ${user_id}:${group_id} ${work_folder}/build
-        chown -R ${user_id}:${group_id} ${work_folder}/install
-        chown -R ${user_id}:${group_id} ${work_folder}/output
+        chown -R ${user_id}:${group_id} ${WORK_FOLDER_PATH}/build
+        chown -R ${user_id}:${group_id} ${WORK_FOLDER_PATH}/install
+        chown -R ${user_id}:${group_id} ${WORK_FOLDER_PATH}/output
       fi
 }
 
