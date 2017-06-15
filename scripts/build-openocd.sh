@@ -53,26 +53,30 @@ APP_LC_NAME="openocd"
 # Final choice is a Work folder in HOME.
 if [ -d /media/psf/Home/Work ]
 then
-  WORK_FOLDER=${WORK_FOLDER:-"/media/psf/Home/Work/${APP_LC_NAME}"}
+  WORK_FOLDER_PATH=${WORK_FOLDER_PATH:-"/media/psf/Home/Work/${APP_LC_NAME}"}
 elif [ -d /media/${USER}/Work ]
 then
-  WORK_FOLDER=${WORK_FOLDER:-"/media/${USER}/Work/${APP_LC_NAME}"}
+  WORK_FOLDER_PATH=${WORK_FOLDER_PATH:-"/media/${USER}/Work/${APP_LC_NAME}"}
 elif [ -d /media/Work ]
 then
-  WORK_FOLDER=${WORK_FOLDER:-"/media/Work/${APP_LC_NAME}"}
+  WORK_FOLDER_PATH=${WORK_FOLDER_PATH:-"/media/Work/${APP_LC_NAME}"}
 else
   # Final choice, a Work folder in HOME.
-  WORK_FOLDER=${WORK_FOLDER:-"${HOME}/Work/${APP_LC_NAME}"}
+  WORK_FOLDER_PATH=${WORK_FOLDER_PATH:-"${HOME}/Work/${APP_LC_NAME}"}
 fi
 
-BUILD_FOLDER="${WORK_FOLDER}/build"
+BUILD_FOLDER_PATH="${WORK_FOLDER_PATH}/build"
+
+PROJECT_GIT_FOLDER_NAME="openocd-build.git"
+PROJECT_GIT_FOLDER_PATH="${WORK_FOLDER_PATH}/${PROJECT_GIT_FOLDER_NAME}"
+PROEJCT_GIT_URL="https://github.com/gnu-mcu-eclipse/${PROJECT_GIT_FOLDER_NAME}"
 
 # ----- Create Work folder. -----
 
 echo
-echo "Work folder: \"${WORK_FOLDER}\"."
+echo "Work folder: \"${WORK_FOLDER_PATH}\"."
 
-mkdir -p "${WORK_FOLDER}"
+mkdir -p "${WORK_FOLDER_PATH}"
 
 # ----- Parse actions and command line options. -----
 
@@ -82,7 +86,7 @@ DO_BUILD_WIN64=""
 DO_BUILD_DEB32=""
 DO_BUILD_DEB64=""
 DO_BUILD_OSX=""
-helper_script=""
+helper_script_path=""
 do_no_strip=""
 
 while [ $# -gt 0 ]
@@ -125,7 +129,7 @@ do
       ;;
 
     --helper-script)
-      helper_script=$2
+      helper_script_path=$2
       shift 2
       ;;
 
@@ -152,58 +156,69 @@ done
 
 # ----- Prepare build scripts. -----
 
-build_script=$0
-if [[ "${build_script}" != /* ]]
+build_script_path=$0
+if [[ "${build_script_path}" != /* ]]
 then
   # Make relative path absolute.
-  build_script=$(pwd)/$0
+  build_script_path=$(pwd)/$0
 fi
 
 # Copy the current script to Work area, to later copy it into the install folder.
-mkdir -p "${WORK_FOLDER}/scripts"
-cp "${build_script}" "${WORK_FOLDER}/scripts/build-${APP_LC_NAME}.sh"
+mkdir -p "${WORK_FOLDER_PATH}/scripts"
+cp "${build_script_path}" "${WORK_FOLDER_PATH}/scripts/build-${APP_LC_NAME}.sh"
 
 # ----- Build helper. -----
 
-if [ -z "${helper_script}" ]
+if [ -z "${helper_script_path}" ]
 then
-  script_folder_path="$(dirname ${build_script})"
+  script_folder_path="$(dirname ${build_script_path})"
   script_folder_name="$(basename ${script_folder_path})"
   if [ \( "${script_folder_name}" == "scripts" \) \
     -a \( -f "${script_folder_path}/build-helper.sh" \) ]
   then
-    helper_script="${script_folder_path}/build-helper.sh"
-  elif [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
+    helper_script_path="${script_folder_path}/build-helper.sh"
+  elif [ ! -f "${WORK_FOLDER_PATH}/scripts/build-helper.sh" ]
   then
     # Download helper script from GitHub git.
     echo "Downloading helper script..."
     curl -L "https://github.com/gnu-mcu-eclipse/build-scripts/raw/master/scripts/build-helper.sh" \
-      --output "${WORK_FOLDER}/scripts/build-helper.sh"
-    helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
+      --output "${WORK_FOLDER_PATH}/scripts/build-helper.sh"
+    helper_script_path="${WORK_FOLDER_PATH}/scripts/build-helper.sh"
   else
-    helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
+    helper_script_path="${WORK_FOLDER_PATH}/scripts/build-helper.sh"
   fi
 else
-  if [[ "${helper_script}" != /* ]]
+  if [[ "${helper_script_path}" != /* ]]
   then
     # Make relative path absolute.
-    helper_script="$(pwd)/${helper_script}"
+    helper_script_path="$(pwd)/${helper_script_path}"
   fi
 fi
 
 # Copy the current helper script to Work area, to later copy it into the install folder.
-mkdir -p "${WORK_FOLDER}/scripts"
-if [ "${helper_script}" != "${WORK_FOLDER}/scripts/build-helper.sh" ]
+mkdir -p "${WORK_FOLDER_PATH}/scripts"
+if [ "${helper_script_path}" != "${WORK_FOLDER_PATH}/scripts/build-helper.sh" ]
 then
-  cp "${helper_script}" "${WORK_FOLDER}/scripts/build-helper.sh"
+  cp "${helper_script_path}" "${WORK_FOLDER_PATH}/scripts/build-helper.sh"
 fi
 
-echo "Helper script: \"${helper_script}\"."
-source "$helper_script"
+echo "Helper script: \"${helper_script_path}\"."
+source "${helper_script_path}"
 
-# ----- Library sources. -----
+# ----- Libraries sources. -----
 
 # For updates, please check the corresponding pages.
+
+# The custom OpenOCD branch is available from the dedicated Git repository
+# which is part of the GNU MCU Eclipse project hosted on GitHub.
+# Generally this branch follows the official OpenOCD master branch,
+# with updates after every OpenOCD public release.
+
+OPENOCD_FOLDER_NAME="openocd.git"
+OPENOCD_GIT_URL="https://github.com/gnu-mcu-eclipse/openocd.git"
+OPENOCD_GIT_BRANCH="gnu-mcu-eclipse"
+OPENOCD_GIT_BRANCH_DEV="gnu-mcu-eclipse-dev"
+OPENOCD_GIT_COMMIT="HEAD"
 
 # https://sourceforge.net/projects/libusb/files/libusb-1.0/
 # 1.0.20 from 2015-09-14
@@ -252,9 +267,7 @@ HIDAPI_ARCHIVE="${HIDAPI}.zip"
 
 # ----- Define build constants. -----
 
-GIT_FOLDER="${WORK_FOLDER}/gnu-mcu-eclipse-${APP_LC_NAME}.git"
-
-DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
+DOWNLOAD_FOLDER_PATH="${WORK_FOLDER_PATH}/download"
 
 # ----- Process actions. -----
 
@@ -269,21 +282,22 @@ then
     echo "Remove most of the build folders (except output)..."
   fi
 
-  rm -rf "${BUILD_FOLDER}"
-  rm -rf "${WORK_FOLDER}/install"
+  rm -rf "${BUILD_FOLDER_PATH}"
+  rm -rf "${WORK_FOLDER_PATH}/install"
 
-  rm -rf "${WORK_FOLDER}/${LIBUSB1_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBUSB0_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBUSB_W32_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBFTDI_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${HIDAPI_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBUSB1_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBUSB0_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBUSB_W32_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBFTDI_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${HIDAPI_FOLDER}"
 
-  rm -rf "${WORK_FOLDER}/scripts"
+  rm -rf "${WORK_FOLDER_PATH}/scripts"
 
   if [ "${ACTION}" == "cleanall" ]
   then
-    rm -rf "${GIT_FOLDER}"
-    rm -rf "${WORK_FOLDER}/output"
+    rm -rf "${PROJECT_GIT_FOLDER_PATH}"
+    rm -rf "${WORK_FOLDER_PATH}/${OPENOCD_FOLDER_NAME}"
+    rm -rf "${WORK_FOLDER_PATH}/output"
   fi
 
   echo
@@ -337,7 +351,7 @@ do_host_bootstrap() {
   echo
   echo "bootstrap..."
 
-  cd "${GIT_FOLDER}"
+  cd "${WORK_FOLDER_PATH}/${OPENOCD_FOLDER_NAME}"
   rm -f aclocal.m4
   ./bootstrap
 
@@ -427,35 +441,15 @@ else
     exit 1
 fi
 
-# ----- Get the GNU MCU Eclipse OpenOCD git repository. -----
+# ----- Get the project git repository. -----
 
-# The custom OpenOCD branch is available from the dedicated Git repository
-# which is part of the GNU MCU Eclipse project hosted on GitHub.
-# Generally this branch follows the official OpenOCD master branch,
-# with updates after every OpenOCD public release.
-
-if [ ! -d "${GIT_FOLDER}" ]
+if [ ! -d "${PROJECT_GIT_FOLDER_PATH}" ]
 then
 
-  cd "${WORK_FOLDER}"
+  cd "${WORK_FOLDER_PATH}"
 
-  if [ "${USER}" == "ilg" ]
-  then
-    # Shortcut for ilg, who has full access to the repo.
-    echo
-    echo "If asked, enter ${USER} GitHub password for git clone"
-    git clone -b gnu-mcu-eclipse https://github.com/gnu-mcu-eclipse/openocd.git gnu-mcu-eclipse-${APP_LC_NAME}.git
-  else
-    # For regular read/only access, use the git url.
-    git clone -b gnu-mcu-eclipse http://github.com/gnu-mcu-eclipse/openocd.git gnu-mcu-eclipse-${APP_LC_NAME}.git
-  fi
-
-  # Change to the gnu-mcu-eclipse branch. On subsequent runs use "git pull".
-  cd "${GIT_FOLDER}"
-  git checkout -b gnu-mcu-eclipse-dev origin/gnu-mcu-eclipse-dev
-  git submodule update --init --recursive --remote
-
-  do_host_bootstrap
+  echo "If asked, enter ${USER} GitHub password for git clone"
+  git clone "${PROEJCT_GIT_URL}" "${PROJECT_GIT_FOLDER_PATH}"
 
 fi
 
@@ -478,7 +472,7 @@ do_repo_action() {
     echo "Running git checkout gnu-mcu-eclipse & pull..."
   fi
 
-  if [ -d "${GIT_FOLDER}" ]
+  if [ -d "${PROJECT_GIT_FOLDER_PATH}" ]
   then
     echo
     if [ "${USER}" == "ilg" ]
@@ -486,7 +480,7 @@ do_repo_action() {
       echo "If asked, enter ${USER} GitHub password for git pull"
     fi
 
-    cd "${GIT_FOLDER}"
+    cd "${PROJECT_GIT_FOLDER_PATH}"
 
     if [ "${ACTION}" == "checkout-dev" ]
     then
@@ -496,22 +490,33 @@ do_repo_action() {
       git checkout gnu-mcu-eclipse
     fi
 
-    git pull --recurse-submodules
-    git submodule update --init --recursive --remote
-
-    git branch
-
-    do_host_bootstrap
-
-    rm -rf "${BUILD_FOLDER}/${APP_LC_NAME}"
-
-    echo
-    if [ "${ACTION}" == "pull" ]
+    if false
     then
-      echo "Pull completed. Proceed with a regular build."
+
+      git pull --recurse-submodules
+      git submodule update --init --recursive --remote
+
+      git branch
+
+      do_host_bootstrap
+
+      rm -rf "${BUILD_FOLDER_PATH}/${APP_LC_NAME}"
+
+      echo
+      if [ "${ACTION}" == "pull" ]
+      then
+        echo "Pull completed. Proceed with a regular build."
+      else
+        echo "Checkout completed. Proceed with a regular build."
+      fi
+
     else
-      echo "Checkout completed. Proceed with a regular build."
+
+      echo "Not implemented."
+      exit 1
+
     fi
+
     exit 0
   else
 	echo "No git folder."
@@ -530,6 +535,8 @@ case "${ACTION}" in
     ;;
 esac
 
+# ----- Get the current Git branch name. -----
+
 # Get the current Git branch name, to know if we are building the stable or
 # the development release.
 do_host_get_git_head
@@ -539,6 +546,27 @@ do_host_get_git_head
 # Use the UTC date as version in the name of the distribution file.
 do_host_get_current_date
 
+# ----- Get OPENOCD. -----
+
+if [ ! -d "${WORK_FOLDER_PATH}/${OPENOCD_FOLDER_NAME}" ]
+then
+
+  echo
+  echo "Cloning '${OPENOCD_GIT_URL}'..."
+
+  cd "${WORK_FOLDER_PATH}"
+  git clone --branch "${OPENOCD_GIT_BRANCH_DEV}" "${OPENOCD_GIT_URL}" "${OPENOCD_FOLDER_NAME}"
+  cd "${OPENOCD_FOLDER_NAME}"
+  git checkout -qf "${OPENOCD_GIT_COMMIT}"
+
+  git submodule update --init --recursive --remote
+
+  git branch
+
+  do_host_bootstrap
+
+fi
+
 # ----- Get the USB libraries. -----
 
 # Both USB libraries are available from a single project LIBUSB
@@ -547,61 +575,67 @@ do_host_get_current_date
 # 	https://sourceforge.net/projects/libusb/files
 
 # Download the new USB library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBUSB1_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBUSB1_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  echo
   echo "Downloading \"${LIBUSB1_ARCHIVE}\"..."
+
+  cd "${DOWNLOAD_FOLDER_PATH}"
   curl -L "http://sourceforge.net/projects/libusb/files/libusb-1.0/${LIBUSB1_FOLDER}/${LIBUSB1_ARCHIVE}" \
     --output "${LIBUSB1_ARCHIVE}"
 fi
 
 # Unpack the new USB library.
-if [ ! -d "${WORK_FOLDER}/${LIBUSB1_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBUSB1_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xjvf "${DOWNLOAD_FOLDER}/${LIBUSB1_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xjvf "${DOWNLOAD_FOLDER_PATH}/${LIBUSB1_ARCHIVE}"
 fi
 
 # http://www.libusb.org
 
 # Download the old USB library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBUSB0_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBUSB0_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  echo
   echo "Downloading \"${LIBUSB0_ARCHIVE}\"..."
+
+  cd "${DOWNLOAD_FOLDER_PATH}"
   curl -L "http://sourceforge.net/projects/libusb/files/libusb-compat-0.1/${LIBUSB0_FOLDER}/${LIBUSB0_ARCHIVE}" \
     --output "${LIBUSB0_ARCHIVE}"
 fi
 
 # Unpack the old USB library.
-if [ ! -d "${WORK_FOLDER}/${LIBUSB0_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBUSB0_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xjvf "${DOWNLOAD_FOLDER}/${LIBUSB0_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xjvf "${DOWNLOAD_FOLDER_PATH}/${LIBUSB0_ARCHIVE}"
 fi
 
 # https://sourceforge.net/projects/libusb-win32
 
 # Download the old Win32 USB library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBUSB_W32_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBUSB_W32_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  echo
   echo "Downloading \"${LIBUSB_W32_ARCHIVE}\"..."
+
+  cd "${DOWNLOAD_FOLDER_PATH}"
   curl -L "http://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/${LIBUSB_W32_VERSION}/${LIBUSB_W32_ARCHIVE}" \
     --output "${LIBUSB_W32_ARCHIVE}"
 fi
 
 # Unpack the old Win32 USB library.
-if [ ! -d "${WORK_FOLDER}/${LIBUSB_W32_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBUSB_W32_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  unzip "${DOWNLOAD_FOLDER}/${LIBUSB_W32_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  unzip "${DOWNLOAD_FOLDER_PATH}/${LIBUSB_W32_ARCHIVE}"
 fi
 
 
@@ -612,25 +646,33 @@ fi
 #	http://www.intra2net.com/en/developer/libftdi/
 
 # Download the FTDI library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBFTDI_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBFTDI_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  echo
   echo "Downloading \"${LIBFTDI_ARCHIVE}\"..."
+
+  cd "${DOWNLOAD_FOLDER_PATH}"
   curl -L "http://www.intra2net.com/en/developer/libftdi/download/${LIBFTDI_ARCHIVE}" \
     --output "${LIBFTDI_ARCHIVE}"
 fi
 
 # Unpack the FTDI library.
-if [ ! -d "${WORK_FOLDER}/${LIBFTDI_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBFTDI_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xjvf "${DOWNLOAD_FOLDER}/${LIBFTDI_ARCHIVE}"
+  echo
+  echo "Unpacking \"${LIBFTDI_ARCHIVE}\"..."
 
-  cd "${WORK_FOLDER}/${LIBFTDI_FOLDER}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xjvf "${DOWNLOAD_FOLDER_PATH}/${LIBFTDI_ARCHIVE}"
+
+  echo
+  echo "Patching \"${LIBFTDI_FOLDER}\"..."
+
+  cd "${WORK_FOLDER_PATH}/${LIBFTDI_FOLDER}"
   # Patch to prevent the use of system libraries and force the use of local ones.
-  patch -p0 < "${GIT_FOLDER}/gnu-mcu-eclipse/patches/${LIBFTDI}-cmake-FindUSB1.patch"
+  patch -p0 < "${PROJECT_GIT_FOLDER_PATH}/gnu-mcu-eclipse/patches/${LIBFTDI}-cmake-FindUSB1.patch"
 fi
 
 # ----- Get the HDI library. -----
@@ -639,12 +681,14 @@ fi
 # http://www.signal11.us/oss/hidapi/
 
 # Download the HDI library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${HIDAPI_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${HIDAPI_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
+  echo
   echo "Downloading \"${HIDAPI_ARCHIVE}\"..."
+
   # https://github.com/downloads/signal11/hidapi
   # https://github.com/signal11/hidapi/archive/
   curl -L "https://github.com/signal11/hidapi/archive//${HIDAPI_ARCHIVE}" \
@@ -652,10 +696,10 @@ then
 fi
 
 # Unpack the HDI library.
-if [ ! -d "${WORK_FOLDER}/${HIDAPI_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${HIDAPI_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  unzip "${DOWNLOAD_FOLDER}/${HIDAPI_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  unzip "${DOWNLOAD_FOLDER_PATH}/${HIDAPI_ARCHIVE}"
 fi
 
 
@@ -663,14 +707,14 @@ fi
 # Create the build script (needs to be separate for Docker).
 
 script_name="build.sh"
-script_file="${WORK_FOLDER}/scripts/${script_name}"
+script_file_path="${WORK_FOLDER_PATH}/scripts/${script_name}"
 
-rm -f "${script_file}"
-mkdir -p "$(dirname ${script_file})"
-touch "${script_file}"
+rm -f "${script_file_path}"
+mkdir -p "$(dirname ${script_file_path})"
+touch "${script_file_path}"
 
 # Note: EOF is quoted to prevent substitutions here.
-cat <<'EOF' >> "${script_file}"
+cat <<'EOF' >> "${script_file_path}"
 #!/usr/bin/env bash
 
 # -----------------------------------------------------------------------------
@@ -696,13 +740,15 @@ EOF
 # The above marker must start in the first column.
 
 # Note: EOF is not quoted to allow local substitutions.
-cat <<EOF >> "${script_file}"
+cat <<EOF >> "${script_file_path}"
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
 APP_UC_NAME="${APP_UC_NAME}"
 GIT_HEAD="${GIT_HEAD}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
+PROJECT_GIT_FOLDER_NAME="${PROJECT_GIT_FOLDER_NAME}"
+OPENOCD_FOLDER_NAME="${OPENOCD_FOLDER_NAME}"
 
 LIBUSB1_FOLDER="${LIBUSB1_FOLDER}"
 LIBUSB0_FOLDER="${LIBUSB0_FOLDER}"
@@ -721,19 +767,21 @@ EOF
 set +u
 if [[ ! -z ${DEBUG} ]]
 then
-  echo "DEBUG=${DEBUG}" "${script_file}"
+  echo "DEBUG=${DEBUG}" "${script_file_path}"
   echo
 fi
 set -u
 
 # Note: EOF is quoted to prevent substitutions here.
-cat <<'EOF' >> "${script_file}"
+cat <<'EOF' >> "${script_file_path}"
 
 PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR:-""}
 
 # For just in case.
 export LC_ALL="C"
 export CONFIG_SHELL="/bin/bash"
+
+jobs="--jobs=8"
 
 script_name="$(basename "$0")"
 args="$@"
@@ -743,7 +791,7 @@ while [ $# -gt 0 ]
 do
   case "$1" in
     --build-folder)
-      build_folder="$2"
+      build_folder_path="$2"
       shift 2
       ;;
     --docker-container-name)
@@ -759,11 +807,11 @@ do
       shift 2
       ;;
     --work-folder)
-      work_folder="$2"
+      work_folder_path="$2"
       shift 2
       ;;
     --output-folder)
-      output_folder="$2"
+      output_folder_path="$2"
       shift 2
       ;;
     --distribution-folder)
@@ -779,7 +827,7 @@ do
       shift 2
       ;;
     --helper-script)
-      helper_script="$2"
+      helper_script_path="$2"
       shift 2
       ;;
     --group-id)
@@ -800,13 +848,13 @@ do
   esac
 done
 
-git_folder="${work_folder}/gnu-mcu-eclipse-${APP_LC_NAME}.git"
+git_folder_path="${work_folder_path}/${PROJECT_GIT_FOLDER_NAME}"
 
 echo
 uname -a
 
 # Run the helper script in this shell, to get the support functions.
-source "${helper_script}"
+source "${helper_script_path}"
 
 target_folder=${target_name}${target_bits:-""}
 
@@ -829,8 +877,8 @@ then
 
 fi
 
-mkdir -p ${build_folder}
-cd ${build_folder}
+mkdir -p "${build_folder_path}"
+cd "${build_folder_path}"
 
 # ----- Test if various tools are present -----
 
@@ -879,38 +927,41 @@ fi
 echo "Checking shasum..."
 shasum --version
 
-# ----- Remove and recreate the output folder. -----
+# ----- Recreate the output folder. -----
 
-rm -rf "${output_folder}"
-mkdir -p "${output_folder}"
+# rm -rf "${output_folder_path}"
+mkdir -p "${output_folder_path}"
 
 # ----- Build and install the new USB library. -----
 
-if [ ! \( -f "${install_folder}/lib/libusb-1.0.a" -o \
-          -f "${install_folder}/lib64/libusb-1.0.a" \) ]
+libusb1_stamp_file="${build_folder_path}/${LIBUSB1_FOLDER}/stamp-install-completed"
+
+# if [ ! \( -f "${install_folder}/lib/libusb-1.0.a" -o \
+#          -f "${install_folder}/lib64/libusb-1.0.a" \) ]
+if [ ! -f "${libusb1_stamp_file}" ]
 then
 
-  rm -rfv "${build_folder}/${LIBUSB1_FOLDER}"
-  mkdir -p "${build_folder}/${LIBUSB1_FOLDER}"
+  rm -rfv "${build_folder_path}/${LIBUSB1_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBUSB1_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running configure libusb1..."
 
-  cd "${build_folder}/${LIBUSB1_FOLDER}"
+  cd "${build_folder_path}/${LIBUSB1_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-Wno-non-literal-null-conversion -Werror -m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
-    "${work_folder}/${LIBUSB1_FOLDER}/configure" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
+    "${work_folder_path}/${LIBUSB1_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}"
   else
     CFLAGS="-Wno-non-literal-null-conversion -Wno-deprecated-declarations -Werror -m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
-    "${work_folder}/${LIBUSB1_FOLDER}/configure" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
+    "${work_folder_path}/${LIBUSB1_FOLDER}/configure" \
       --prefix="${install_folder}"
   fi
 
@@ -918,7 +969,7 @@ then
   echo "Running make libusb1..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
   if [ "${target_name}" == "win" ]
   then
@@ -928,24 +979,29 @@ then
     rm -f "${install_folder}/lib/libusb-1.0.la"
   fi
 
+  touch "${libusb1_stamp_file}"
 fi
 
 # ----- Build and install the old USB library. -----
 
+libusb0_stamp_file="${build_folder_path}/${LIBUSB0_FOLDER}/stamp-install-completed"
+
+# if [ \( "${target_name}" != "win" \) -a \
+#     ! \( -f "${install_folder}/lib/libusb.a" -o \
+#          -f "${install_folder}/lib64/libusb.a" \) ]
 if [ \( "${target_name}" != "win" \) -a \
-     ! \( -f "${install_folder}/lib/libusb.a" -o \
-          -f "${install_folder}/lib64/libusb.a" \) ]
+    ! \( -f "${libusb0_stamp_file}" \) ]
 then
 
-  rm -rf "${build_folder}/${LIBUSB0_FOLDER}"
-  mkdir -p "${build_folder}/${LIBUSB0_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBUSB0_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBUSB0_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running configure libusb0..."
 
-  cd "${build_folder}/${LIBUSB0_FOLDER}"
+  cd "${build_folder_path}/${LIBUSB0_FOLDER}"
 
   CFLAGS="-Werror -m${target_bits} -pipe" \
   \
@@ -953,34 +1009,39 @@ then
 "${install_folder}/lib/pkgconfig":\
 "${install_folder}/lib64/pkgconfig" \
   \
-  "${work_folder}/${LIBUSB0_FOLDER}/configure" \
+  "${work_folder_path}/${LIBUSB0_FOLDER}/configure" \
     --prefix="${install_folder}"
 
   echo
   echo "Running make libusb0..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
+  touch "${libusb0_stamp_file}"
 fi
 
 # ----- Build and install the old Win32 USB library. -----
 
+libusb_w32_stamp_file="${build_folder_path}/${LIBUSB_W32}/stamp-install-completed"
+
+# if [ \( "${target_name}" == "win" \) -a \
+#      ! \( -f "${install_folder}/lib/libusb.a" -o \
+#           -f "${install_folder}/lib64/libusb.a" \)  ]
 if [ \( "${target_name}" == "win" \) -a \
-     ! \( -f "${install_folder}/lib/libusb.a" -o \
-          -f "${install_folder}/lib64/libusb.a" \)  ]
+     ! \( -f "${libusb_w32_stamp_file}" \)  ]
 then
 
-  mkdir -p "${build_folder}/${LIBUSB_W32}"
+  mkdir -p "${build_folder_path}/${LIBUSB_W32}"
 
-  cd "${build_folder}/${LIBUSB_W32}"
-  cp -r "${work_folder}/${LIBUSB_W32_FOLDER}/"* \
-    "${build_folder}/${LIBUSB_W32}"
+  cd "${build_folder_path}/${LIBUSB_W32}"
+  cp -r "${work_folder_path}/${LIBUSB_W32_FOLDER}/"* \
+    "${build_folder_path}/${LIBUSB_W32}"
 
   echo
   echo "Running make libusb-win32..."
 
-  cd "${build_folder}/${LIBUSB_W32}"
+  cd "${build_folder_path}/${LIBUSB_W32}"
 
   # Patch from:
   # https://gitorious.org/jtag-tools/openocd-mingw-build-scripts
@@ -990,46 +1051,50 @@ then
   dos2unix src/install.c
   dos2unix src/install_filter_win.c
   dos2unix src/registry.c
-  patch -p1 < "${git_folder}/gnu-mcu-eclipse/patches/${LIBUSB_W32}-mingw-w64.patch"
+  patch -p1 < "${git_folder_path}/gnu-mcu-eclipse/patches/${LIBUSB_W32}-mingw-w64.patch"
 
   # Build.
   CFLAGS="-Wno-unknown-pragmas -Wno-unused-variable -Wno-pointer-sign -Wno-unused-but-set-variable -Werror -m${target_bits} -pipe" \
   make host_prefix=${cross_compile_prefix} host_prefix_x86=i686-w64-mingw32 dll
 
   mkdir -p "${install_folder}/bin"
-  cp -v "${build_folder}/${LIBUSB_W32}/libusb0.dll" \
+  cp -v "${build_folder_path}/${LIBUSB_W32}/libusb0.dll" \
      "${install_folder}/bin"
 
   mkdir -p "${install_folder}/lib"
-  cp -v "${build_folder}/${LIBUSB_W32}/libusb.a" \
+  cp -v "${build_folder_path}/${LIBUSB_W32}/libusb.a" \
      "${install_folder}/lib"
 
   mkdir -p "${install_folder}/lib/pkgconfig"
   sed -e "s|XXX|${install_folder}|" \
-    "${git_folder}/gnu-mcu-eclipse/pkgconfig/${LIBUSB_W32}.pc" \
+    "${git_folder_path}/gnu-mcu-eclipse/pkgconfig/${LIBUSB_W32}.pc" \
     > "${install_folder}/lib/pkgconfig/libusb.pc"
 
   mkdir -p "${install_folder}/include/libusb"
-  cp -v "${build_folder}/${LIBUSB_W32}/src/lusb0_usb.h" \
+  cp -v "${build_folder_path}/${LIBUSB_W32}/src/lusb0_usb.h" \
      "${install_folder}/include/libusb/usb.h"
 
+  touch "${libusb_w32_stamp_file}"
 fi
 
 # ----- Build and install the FTDI library. -----
 
-if [ ! \( -f "${install_folder}/lib/libftdi1.a" -o \
-           -f "${install_folder}/lib64/libftdi1.a" \)  ]
+libftdi_stamp_file="${build_folder_path}/${LIBFTDI_FOLDER}/stamp-install-completed"
+
+# if [ ! \( -f "${install_folder}/lib/libftdi1.a" -o \
+#            -f "${install_folder}/lib64/libftdi1.a" \)  ]
+if [ ! -f "${libftdi_stamp_file}" ]
 then
 
-  rm -rfv "${build_folder}/${LIBFTDI_FOLDER}"
-  mkdir -p "${build_folder}/${LIBFTDI_FOLDER}"
+  rm -rfv "${build_folder_path}/${LIBFTDI_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBFTDI_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running cmake libftdi..."
 
-  cd "${build_folder}/${LIBFTDI_FOLDER}"
+  cd "${build_folder_path}/${LIBFTDI_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
@@ -1042,8 +1107,8 @@ then
 "${install_folder}/lib64/pkgconfig" \
     \
     cmake \
-    -DPKG_CONFIG_EXECUTABLE="${git_folder}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
-    -DCMAKE_TOOLCHAIN_FILE="${work_folder}/${LIBFTDI_FOLDER}/cmake/Toolchain-${cross_compile_prefix}.cmake" \
+    -DPKG_CONFIG_EXECUTABLE="${git_folder_path}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
+    -DCMAKE_TOOLCHAIN_FILE="${work_folder_path}/${LIBFTDI_FOLDER}/cmake/Toolchain-${cross_compile_prefix}.cmake" \
     -DCMAKE_INSTALL_PREFIX="${install_folder}" \
     -DLIBUSB_INCLUDE_DIR="${install_folder}/include/libusb-1.0" \
     -DLIBUSB_LIBRARIES="${install_folder}/lib/libusb-1.0.a" \
@@ -1053,7 +1118,7 @@ then
     -DEXAMPLES:BOOL=off \
     -DDOCUMENTATION:BOOL=off \
     -DFTDI_EEPROM:BOOL=off \
-    "${work_folder}/${LIBFTDI_FOLDER}"
+    "${work_folder_path}/${LIBFTDI_FOLDER}"
 
   else
 
@@ -1071,7 +1136,7 @@ then
     -DEXAMPLES:BOOL=off \
     -DDOCUMENTATION:BOOL=off \
     -DFTDI_EEPROM:BOOL=off \
-    "${work_folder}/${LIBFTDI_FOLDER}"
+    "${work_folder_path}/${LIBFTDI_FOLDER}"
 
   fi
 
@@ -1079,7 +1144,7 @@ then
   echo "Running make libftdi..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
   if [ "${target_name}" == "win" ]
   then
@@ -1090,10 +1155,13 @@ then
     rm -f "${install_folder}/lib/pkgconfig/libftdipp1.pc"
   fi
 
+  touch "${libftdi_stamp_file}"
 fi
 
 
 # ----- Build the new HDI library. -----
+
+libhdi_stamp_file="${build_folder_path}/${HIDAPI_FOLDER}/stamp-install-completed"
 
 if [ "${target_name}" == "win" ]
 then
@@ -1110,14 +1178,15 @@ then
   HIDAPI_A="libhidapi-hidraw.a"
 fi
 
-if [ ! -f "${install_folder}/lib/${HIDAPI_A}" ]
+# if [ ! -f "${install_folder}/lib/${HIDAPI_A}" ]
+if [ ! -f "${libhdi_stamp_file}" ]
 then
 
-  rm -rfv "${build_folder}/${HIDAPI_FOLDER}"
-  mkdir -p "${build_folder}/${HIDAPI_FOLDER}"
+  rm -rfv "${build_folder_path}/${HIDAPI_FOLDER}"
+  mkdir -p "${build_folder_path}/${HIDAPI_FOLDER}"
 
-  cp -r "${work_folder}/${HIDAPI_FOLDER}/"* \
-    "${build_folder}/${HIDAPI_FOLDER}"
+  cp -r "${work_folder_path}/${HIDAPI_FOLDER}/"* \
+    "${build_folder_path}/${HIDAPI_FOLDER}"
 
   echo
   echo "Running make libhid..."
@@ -1125,7 +1194,7 @@ then
   if [ "${target_name}" == "win" ]
   then
 
-    cd "${build_folder}/${HIDAPI_FOLDER}/${HIDAPI_TARGET}"
+    cd "${build_folder_path}/${HIDAPI_FOLDER}/${HIDAPI_TARGET}"
 
     CFLAGS="-Werror -m${target_bits} -pipe" \
     \
@@ -1146,11 +1215,11 @@ then
 
     mkdir -p "${install_folder}/lib/pkgconfig"
     sed -e "s|XXX|${install_folder}|" \
-      "${git_folder}/gnu-mcu-eclipse/pkgconfig/${HIDAPI}-${HIDAPI_TARGET}.pc" \
+      "${git_folder_path}/gnu-mcu-eclipse/pkgconfig/${HIDAPI}-${HIDAPI_TARGET}.pc" \
       > "${install_folder}/lib/pkgconfig/hidapi.pc"
 
     mkdir -p "${install_folder}/include/hidapi"
-    cp -v "${work_folder}/${HIDAPI_FOLDER}/hidapi/hidapi.h" \
+    cp -v "${work_folder_path}/${HIDAPI_FOLDER}/hidapi/hidapi.h" \
       "${install_folder}/include/hidapi"
 
   elif [ "${target_name}" == "debian" ]
@@ -1168,7 +1237,7 @@ then
       cp /usr/lib/i386-linux-gnu/pkgconfig/libudev.pc "${install_folder}/lib/pkgconfig"
     fi
 
-    cd "${build_folder}/${HIDAPI_FOLDER}"
+    cd "${build_folder_path}/${HIDAPI_FOLDER}"
 
     ./bootstrap
 
@@ -1178,13 +1247,13 @@ then
     \
     ./configure --prefix="${install_folder}"
 
-    make
-    make install
+    make "${jobs}" 
+    make "${jobs}" install
 
   elif [ "${target_name}" == "osx" ]
   then
 
-    cd "${build_folder}/${HIDAPI_FOLDER}"
+    cd "${build_folder_path}/${HIDAPI_FOLDER}"
 
     ./bootstrap
 
@@ -1194,19 +1263,20 @@ then
     \
     ./configure --prefix="${install_folder}"
 
-    make
-    make install
+    make "${jobs}"
+    make "${jobs}" install
 
   fi
 
+  touch "${libhdi_stamp_file}"
 fi
 
 # Create the build folder.
-mkdir -p "${build_folder}/openocd"
+mkdir -p "${build_folder_path}/openocd"
 
 # ----- Configure OpenOCD. Use the same options as Freddie Chopin. -----
 
-if [ ! -f "${build_folder}/${APP_LC_NAME}/config.h" ]
+if [ ! -f "${build_folder_path}/${APP_LC_NAME}/config.h" ]
 then
 
   echo
@@ -1221,7 +1291,7 @@ then
   if [ "${target_name}" == "win" ]
   then
 
-    cd "${build_folder}/openocd"
+    cd "${build_folder_path}/openocd"
 
     # --enable-minidriver-dummy -> configure error
     # --enable-buspirate -> not supported on mingw
@@ -1234,14 +1304,14 @@ then
 
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
-    OUTPUT_DIR="${build_folder}" \
+    OUTPUT_DIR="${build_folder_path}" \
     \
     CPPFLAGS="-Werror -m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     PKG_CONFIG_PREFIX="${install_folder}" \
     \
-    bash "${git_folder}/configure" \
+    bash "${work_folder_path}/${OPENOCD_FOLDER_NAME}/configure" \
     --build="$(uname -m)-linux-gnu" \
     --host="${cross_compile_prefix}" \
     --prefix="${install_folder}/openocd"  \
@@ -1292,7 +1362,7 @@ then
     --enable-vsllink \
     --disable-zy1000-master \
     --disable-zy1000 \
-    | tee "${output_folder}/configure-output.txt"
+    | tee "${output_folder_path}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
 
   elif [ "${target_name}" == "debian" ]
@@ -1300,7 +1370,7 @@ then
 
     LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-""}
 
-    cd "${build_folder}/openocd"
+    cd "${build_folder_path}/openocd"
 
     # --enable-minidriver-dummy -> configure error
 
@@ -1318,7 +1388,7 @@ then
     \
     LD_LIBRARY_PATH="${install_folder}/lib":"${install_folder}/lib64":"${LD_LIBRARY_PATH}" \
     \
-    bash "${git_folder}/configure" \
+    bash "${work_folder_path}/${OPENOCD_FOLDER_NAME}/configure" \
     --prefix="${install_folder}/openocd"  \
     --datarootdir="${install_folder}" \
     --infodir="${install_folder}/${APP_LC_NAME}/info"  \
@@ -1367,7 +1437,7 @@ then
     --enable-vsllink \
     --disable-zy1000-master \
     --disable-zy1000 \
-    | tee "${output_folder}/configure-output.txt"
+    | tee "${output_folder_path}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
 
   elif [ "${target_name}" == "osx" ]
@@ -1375,7 +1445,7 @@ then
 
     DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH:-""}
 
-    cd "${build_folder}/openocd"
+    cd "${build_folder_path}/openocd"
 
     # --enable-minidriver-dummy -> configure error
     # --enable-sysfsgpio -> available only on Linux
@@ -1394,7 +1464,7 @@ then
     \
     DYLD_LIBRARY_PATH="${install_folder}/lib":"${DYLD_LIBRARY_PATH}" \
     \
-    bash "${git_folder}/configure" \
+    bash "${work_folder_path}/${OPENOCD_FOLDER_NAME}/configure" \
     --prefix="${install_folder}/openocd"  \
     --datarootdir="${install_folder}" \
     --infodir="${install_folder}/${APP_LC_NAME}/info"  \
@@ -1443,21 +1513,23 @@ then
     --enable-vsllink \
     --disable-zy1000-master \
     --disable-zy1000 \
-    | tee "${output_folder}/configure-output.txt"
+    | tee "${output_folder_path}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
 
   fi
 
+  cd "${build_folder_path}/${APP_LC_NAME}"
+  cp config.* "${output_folder_path}"
+
 fi
-
-cd "${build_folder}/${APP_LC_NAME}"
-cp config.* "${output_folder}"
-
 
 # ----- Full build, with documentation. -----
 
-if [ ! \( -f "${build_folder}/${APP_LC_NAME}/src/openocd" \) -a \
-     ! \( -f "${build_folder}/${APP_LC_NAME}/src/openocd.exe" \) ]
+openocd_stamp_file="${build_folder_path}/${APP_LC_NAME}/stamp-install-completed"
+
+# if [ ! \( -f "${build_folder_path}/${APP_LC_NAME}/src/openocd" \) -a \
+#     ! \( -f "${build_folder_path}/${APP_LC_NAME}/src/openocd.exe" \) ]
+if [ ! -f "${openocd_stamp_file}" ]
 then
 
   # The bindir and pkgdatadir are required to configure bin and scripts folders
@@ -1466,26 +1538,26 @@ then
   echo
   echo "Running make all..."
 
-  cd "${build_folder}/${APP_LC_NAME}"
-  make bindir="bin" pkgdatadir="" all pdf html \
-  | tee "${output_folder}/make-all-output.txt"
+  cd "${build_folder_path}/${APP_LC_NAME}"
+  make "${jobs}" bindir="bin" pkgdatadir="" all pdf html \
+    | tee "${output_folder_path}/make-all-output.txt"
 
+  echo
+  echo "Running make install..."
+
+  make "${jobs}" install install-pdf install-html install-man \
+    | tee "${output_folder_path}/make-install-output.txt"
+
+  touch "${openocd_stamp_file}"
 fi
 
-# ----- Full install, including documentation. -----
-
-echo
-echo "Running make install..."
-
-rm -rf "${install_folder}/${APP_LC_NAME}"
-mkdir -p "${install_folder}/${APP_LC_NAME}"
-
-cd "${build_folder}/${APP_LC_NAME}"
-
-make install install-pdf install-html install-man \
-| tee "${output_folder}/make-install-output.txt"
 
 # ----- Copy dynamic libraries to the install bin folder. -----
+
+checking_stamp_file="${build_folder_path}/stamp_check_completed"
+
+if [ ! -f "${checking_stamp_file}" ]
+then
 
 if [ "${target_name}" == "win" ]
 then
@@ -1592,64 +1664,92 @@ then
   do_container_mac_change_built_lib libusb-1.0.0.dylib
   do_container_mac_change_built_lib libusb-0.1.4.dylib
   do_container_mac_change_built_lib libhidapi.0.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libftdi1.2.dylib
   do_container_mac_change_built_lib libusb-1.0.0.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libusb-0.1.4.dylib
   do_container_mac_change_built_lib libusb-1.0.0.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libusb-1.0.0.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libhidapi.0.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
+fi
+
+touch "${checking_stamp_file}"
 fi
 
 # ----- Copy the license files. -----
 
-echo
-echo "Copying license files..."
+license_stamp_file="${build_folder_path}/stamp_license_completed"
 
-do_container_copy_license "${git_folder}" "openocd"
-do_container_copy_license "${work_folder}/${HIDAPI_FOLDER}" "${HIDAPI_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBFTDI_FOLDER}" "${LIBFTDI_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBUSB1_FOLDER}" "${LIBUSB1_FOLDER}"
-
-if [ "${target_name}" == "win" ]
+if [ ! -f "${license_stamp_file}" ]
 then
-  do_container_copy_license "${work_folder}/${LIBUSB_W32_FOLDER}" "${LIBUSB_W32}"
-else
-  do_container_copy_license "${work_folder}/${LIBUSB0_FOLDER}" "${LIBUSB0_FOLDER}"
+
+  echo
+  echo "Copying license files..."
+
+  do_container_copy_license "${git_folder_path}" "openocd"
+  do_container_copy_license "${work_folder_path}/${HIDAPI_FOLDER}" "${HIDAPI_FOLDER}"
+  do_container_copy_license "${work_folder_path}/${LIBFTDI_FOLDER}" "${LIBFTDI_FOLDER}"
+  do_container_copy_license "${work_folder_path}/${LIBUSB1_FOLDER}" "${LIBUSB1_FOLDER}"
+
+  if [ "${target_name}" == "win" ]
+  then
+    do_container_copy_license "${work_folder_path}/${LIBUSB_W32_FOLDER}" "${LIBUSB_W32}"
+  else
+    do_container_copy_license "${work_folder_path}/${LIBUSB0_FOLDER}" "${LIBUSB0_FOLDER}"
+  fi
+
+  if [ "${target_name}" == "win" ]
+  then
+    # For Windows, process cr lf
+    find "${install_folder}/${APP_LC_NAME}/license" -type f \
+      -exec unix2dos {} \;
+  fi
+
+  touch "${license_stamp_file}"
+
 fi
 
-if [ "${target_name}" == "win" ]
-then
-  # For Windows, process cr lf
-  find "${install_folder}/${APP_LC_NAME}/license" -type f \
-    -exec unix2dos {} \;
-fi
 
 # ----- Copy the GNU MCU Eclipse info files. -----
 
-do_container_copy_info
+info_stamp_file="${build_folder_path}/stamp_info_completed"
 
+if [ ! -f "${info_stamp_file}" ]
+then
+
+  do_container_copy_info
+
+  touch "${info_stamp_file}"
+
+fi
 
 # ----- Create the distribution package. -----
 
-mkdir -p "${output_folder}"
+mkdir -p "${output_folder_path}"
+
+if false
+then
 
 if [ "${GIT_HEAD}" == "gnu-mcu-eclipse" ]
 then
-  distribution_file_version=$(cat "${git_folder}/gnu-mcu-eclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
+  distribution_file_version=$(cat "${git_folder_path}/gnu-mcu-eclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
 elif [ "${GIT_HEAD}" == "gnu-mcu-eclipse-dev" ]
 then
-  distribution_file_version=$(cat "${git_folder}/gnu-mcu-eclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-dev
+  distribution_file_version=$(cat "${git_folder_path}/gnu-mcu-eclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-dev
 fi
+
+fi
+
+distribution_file_version=$(cat "${git_folder_path}/gnu-mcu-eclipse/VERSION-dev")-${DISTRIBUTION_FILE_DATE}-dev
 
 distribution_executable_name="openocd"
 

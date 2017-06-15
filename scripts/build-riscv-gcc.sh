@@ -209,6 +209,11 @@ source "${helper_script_path}"
 
 # For updates, please check the corresponding pages.
 
+# The custom RISC-V GCC branch is available from the dedicated Git repository
+# which is part of the GNU MCU Eclipse project hosted on GitHub.
+# Generally this branch follows the official RISC-V GCC master branch,
+# with updates after every RISC-V GCC public release.
+
 GCC_FOLDER_NAME="gcc.git"
 GCC_GIT_URL="https://github.com/gnu-mcu-eclipse/riscv-gcc.git"
 GCC_GIT_BRANCH="riscv-next"
@@ -226,7 +231,7 @@ NEWLIB_GIT_COMMIT="HEAD"
 
 # ----- Define build constants. -----
 
-DOWNLOAD_FOLDER="${WORK_FOLDER_PATH}/download"
+DOWNLOAD_FOLDER_PATH="${WORK_FOLDER_PATH}/download"
 
 # ----- Process actions. -----
 
@@ -405,12 +410,7 @@ fi
 
 fi
 
-# ----- Get the GNU MCU Eclipse RISC-V GCC git repository. -----
-
-# The custom RISC-V GCC branch is available from the dedicated Git repository
-# which is part of the GNU MCU Eclipse project hosted on GitHub.
-# Generally this branch follows the official RISC-V GCC master branch,
-# with updates after every RISC-V GCC public release.
+# ----- Get the project git repository. -----
 
 if [ ! -d "${PROJECT_GIT_FOLDER_PATH}" ]
 then
@@ -419,8 +419,6 @@ then
 
   echo "If asked, enter ${USER} GitHub password for git clone"
   git clone "${PROEJCT_GIT_URL}" "${PROJECT_GIT_FOLDER_PATH}"
-
-  # do_host_bootstrap
 
 fi
 
@@ -520,7 +518,7 @@ do_host_get_current_date
 if [ ! -d "${WORK_FOLDER_PATH}/${BINUTILS_FOLDER_NAME}" ]
 then
   cd "${WORK_FOLDER_PATH}"
-  echo "Cloning \'${BINUTILS_GIT_URL}\'..."
+  echo "Cloning '${BINUTILS_GIT_URL}'..."
   git clone --branch "${BINUTILS_GIT_BRANCH}" "${BINUTILS_GIT_URL}" "${BINUTILS_FOLDER_NAME}"
   cd "${BINUTILS_FOLDER_NAME}"
   git checkout -qf "${BINUTILS_GIT_COMMIT}"
@@ -531,7 +529,7 @@ fi
 if [ ! -d "${WORK_FOLDER_PATH}/${GCC_FOLDER_NAME}" ]
 then
   cd "${WORK_FOLDER_PATH}"
-  echo "Cloning \'${GCC_GIT_URL}\'..."
+  echo "Cloning '${GCC_GIT_URL}'..."
   git clone --branch "${GCC_GIT_BRANCH}" "${GCC_GIT_URL}" "${GCC_FOLDER_NAME}"
   cd "${GCC_FOLDER_NAME}"
   git checkout -qf "${GCC_GIT_COMMIT}"
@@ -542,7 +540,7 @@ fi
 if [ ! -d "${WORK_FOLDER_PATH}/${NEWLIB_FOLDER_NAME}" ]
 then
   cd "${WORK_FOLDER_PATH}"
-  echo "Cloning \'${NEWLIB_GIT_URL}\'..."
+  echo "Cloning '${NEWLIB_GIT_URL}'..."
   git clone --branch "${NEWLIB_GIT_BRANCH}" "${NEWLIB_GIT_URL}" "${NEWLIB_FOLDER_NAME}"
   cd "${NEWLIB_FOLDER_NAME}"
   git checkout -qf "${NEWLIB_GIT_COMMIT}"
@@ -714,8 +712,8 @@ then
 
 fi
 
-mkdir -p ${build_folder_path}
-cd ${build_folder_path}
+mkdir -p "${build_folder_path}"
+cd "${build_folder_path}"
 
 # ----- Test if various tools are present -----
 
@@ -769,9 +767,9 @@ fi
 echo "Checking shasum..."
 shasum --version
 
-# ----- Remove and recreate the output folder. -----
+# ----- Recreate the output folder. -----
 
-rm -rf "${output_folder_path}"
+# rm -rf "${output_folder_path}"
 mkdir -p "${output_folder_path}"
 
 # ----- Build BINUTILS. -----
@@ -780,6 +778,8 @@ binutils_folder="binutils"
 binutils_stamp_file="${build_folder_path}/${binutils_folder}/stamp-install-completed"
 
 gcc_target="riscv64-unknown-elf"
+
+jobs="--jobs=8"
 
 if [ ! -f "${binutils_stamp_file}" ]
 then
@@ -803,6 +803,7 @@ then
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --target="${gcc_target}" \
+      \
       --disable-werror \
       --disable-build-warnings \
       --disable-gdb-build-warnings \
@@ -817,6 +818,7 @@ then
     "${work_folder_path}/${BINUTILS_FOLDER_NAME}/configure" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --target="${gcc_target}" \
+      \
       --disable-werror \
       --disable-build-warnings \
       --disable-gdb-build-warnings \
@@ -831,6 +833,7 @@ then
     "${work_folder_path}/${BINUTILS_FOLDER_NAME}/configure" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --target="${gcc_target}" \
+      \
       --disable-werror \
       --disable-build-warnings \
       --disable-gdb-build-warnings \
@@ -839,10 +842,9 @@ then
 
   fi
 
-  jobs="--jobs=8"
-
   echo
   echo "Running make binutils..."
+
   make clean
   make "${jobs}" all
   make "${jobs}" install
@@ -855,14 +857,35 @@ fi
 
 # ----- Build GCC. -----
 
+
 gcc_folder="gcc"
 newlib_folder="newlib"
 
-if false
+gcc_prerequisites_stamp_file="${build_folder_path}/${gcc_folder}/stamp-prerequisites-completed"
+
+if [ ! -f "${gcc_prerequisites_stamp_file}" ]
 then
 
-if [ ! -f "${build_folder_path}/${APP_LC_NAME}/config.h" ]
+  cd "${work_folder_path}/${GCC_FOLDER_NAME}"
+
+  echo
+  echo "Downloading prerequisites..."
+
+  ./contrib/download_prerequisites
+
+  touch "${gcc_prerequisites_stamp_file}"
+fi
+
+gcc_stamp_file="${build_folder_path}/${gcc_folder}/stamp-install-completed"
+
+saved_path=${PATH}
+PATH="${install_folder}/${APP_LC_NAME}/bin":${PATH}
+
+if [ ! -f "${gcc_stamp_file}" ]
 then
+
+  mkdir -p "${build_folder_path}/${gcc_folder}"
+  cd "${build_folder_path}/${gcc_folder}"
 
   echo
   echo "Running configure RISC-V GCC..."
@@ -1024,64 +1047,66 @@ then
 
     DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH:-""}
 
-    cd "${build_folder_path}/${APP_LC_NAME}"
-
     # All variables below are passed on the command line before 'configure'.
     # Be sure all these lines end in '\' to ensure lines are concatenated.
-    CPPFLAGS="-Werror -m${target_bits} -pipe" \
+    CPPFLAGS="-m${target_bits} -pipe" \
     \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
     \
     DYLD_LIBRARY_PATH="${install_folder}/lib":"${DYLD_LIBRARY_PATH}" \
     \
-    bash "${git_folder_path}/configure" \
-    --prefix="${install_folder}/${APP_LC_NAME}"  \
-    \
-    | tee "${output_folder_path}/configure-output.txt"
-    # Note: don't forget to update the INFO.txt file after changing these.
-
+    bash "${work_folder_path}/${GCC_FOLDER_NAME}/configure" \
+      --prefix="${install_folder}/${APP_LC_NAME}"  \
+      --target="${gcc_target}" \
+      \
+      --disable-shared \
+      --disable-threads \
+      --disable-tls \
+      --enable-languages=c,c++ \
+      --without-system-zlib \
+      --with-newlib \
+      --disable-libmudflap \
+      --disable-libssp \
+      --disable-libquadmath \
+      --disable-libgomp \
+      --disable-nls \
+      --enable-checking=yes \
+      --disable-multilib \
+      --with-abi=lp64d \
+      --with-arch=rv64imafdc \
+      CFLAGS_FOR_TARGET="-Os -mcmodel=medlow" \
+      | tee "configure-output.txt"
+ 
   fi
-
-fi
 
 fi
 
 
 # ----- Full build, with documentation. -----
 
-if false
+if true
 then
-
-if [ ! \( -f "${build_folder_path}/${APP_LC_NAME}/src/openocd" \) -a \
-     ! \( -f "${build_folder_path}/${APP_LC_NAME}/src/openocd.exe" \) ]
-then
-
-  # The bindir and pkgdatadir are required to configure bin and scripts folders
-  # at the same level in the hierarchy.
 
   echo
   echo "Running make all..."
 
-  cd "${build_folder_path}/${APP_LC_NAME}"
-  make bindir="bin" pkgdatadir="" all pdf html \
-  | tee "${output_folder_path}/make-all-output.txt"
+  cd "${build_folder_path}/${gcc_folder}"
+  make "${jobs}" all-gcc install-gcc \
+    | tee "make-all-output.txt"
+
+  echo
+  echo "Running make pdf..."
+
+  make install-pdf install-html install-man \
+    | tee "make-pdf-output.txt"
 
 fi
 
-# ----- Full install, including documentation. -----
+PATH="${saved_path}"
 
-echo
-echo "Running make install..."
+exit
 
-rm -rf "${install_folder}/${APP_LC_NAME}"
-mkdir -p "${install_folder}/${APP_LC_NAME}"
-
-cd "${build_folder_path}/${APP_LC_NAME}"
-
-make install install-pdf install-html install-man \
-| tee "${output_folder_path}/make-install-output.txt"
-
-fi
+touch "${gcc_stamp_file}"
 
 # ----- Copy dynamic libraries to the install bin folder. -----
 

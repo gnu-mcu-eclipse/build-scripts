@@ -357,7 +357,7 @@ do_host_build_target() {
   else
 
     run_local_script \
-      --script "${script_file}" \
+      --script "${script_file_path}" \
       --host-uname "${HOST_UNAME}" \
       -- \
       --build-folder "${WORK_FOLDER_PATH}/build/${target_folder}" \
@@ -519,9 +519,6 @@ do_container_copy_info() {
 
       if [ -f "${output_folder_path}/config.log" ]
       then
-        echo move me to application!
-        exit 1
-
         /usr/bin/install -cv -m 644 "${output_folder_path}/config.log" \
         "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/config.log"
         do_unix2dos "${install_folder}/${APP_LC_NAME}/gnu-mcu-eclipse/config.log"
@@ -704,7 +701,6 @@ do_container_create_distribution() {
         do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
         popd
         
-
         echo
         ls -l "${install_folder}/${APP_LC_NAME}/bin"
 

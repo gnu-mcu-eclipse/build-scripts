@@ -35,7 +35,7 @@ IFS=$'\n\t'
 # Prerequisites:
 #
 #   Docker
-#   curl, git, automake, patch, tar, unzip
+#   curl, git, automake, patch, tar, unzip, zip
 #
 # When running on OS X, a custom Homebrew is required to provide the 
 # missing libraries and TeX binaries.
@@ -54,26 +54,30 @@ APP_LC_NAME="qemu"
 # Final choice is a Work folder in HOME.
 if [ -d /media/psf/Home/Work ]
 then
-  WORK_FOLDER=${WORK_FOLDER:-"/media/psf/Home/Work/${APP_LC_NAME}"}
+  WORK_FOLDER_PATH=${WORK_FOLDER_PATH:-"/media/psf/Home/Work/${APP_LC_NAME}"}
 elif [ -d /media/${USER}/Work ]
 then
-  WORK_FOLDER=${WORK_FOLDER:-"/media/${USER}/Work/${APP_LC_NAME}"}
+  WORK_FOLDER_PATH=${WORK_FOLDER_PATH:-"/media/${USER}/Work/${APP_LC_NAME}"}
 elif [ -d /media/Work ]
 then
-  WORK_FOLDER=${WORK_FOLDER:-"/media/Work/${APP_LC_NAME}"}
+  WORK_FOLDER_PATH=${WORK_FOLDER_PATH:-"/media/Work/${APP_LC_NAME}"}
 else
   # Final choice, a Work folder in HOME.
-  WORK_FOLDER=${WORK_FOLDER:-"${HOME}/Work/${APP_LC_NAME}"}
+  WORK_FOLDER_PATH=${WORK_FOLDER_PATH:-"${HOME}/Work/${APP_LC_NAME}"}
 fi
 
-BUILD_FOLDER="${WORK_FOLDER}/build"
+BUILD_FOLDER_PATH="${WORK_FOLDER_PATH}/build"
+
+PROJECT_GIT_FOLDER_NAME="qemu-build.git"
+PROJECT_GIT_FOLDER_PATH="${WORK_FOLDER_PATH}/${PROJECT_GIT_FOLDER_NAME}"
+PROEJCT_GIT_URL="https://github.com/gnu-mcu-eclipse/${PROJECT_GIT_FOLDER_NAME}"
 
 # ----- Create Work folder. -----
 
 echo
-echo "Using \"${WORK_FOLDER}\" as Work folder..."
+echo "Using \"${WORK_FOLDER_PATH}\" as Work folder..."
 
-mkdir -p "${WORK_FOLDER}"
+mkdir -p "${WORK_FOLDER_PATH}"
 
 # ----- Parse actions and command line options. -----
 
@@ -83,7 +87,7 @@ DO_BUILD_WIN64=""
 DO_BUILD_DEB32=""
 DO_BUILD_DEB64=""
 DO_BUILD_OSX=""
-helper_script=""
+helper_script_path=""
 do_no_strip=""
 
 while [ $# -gt 0 ]
@@ -126,7 +130,7 @@ do
       ;;
 
     --helper-script)
-      helper_script=$2
+      helper_script_path=$2
       shift 2
       ;;
 
@@ -153,58 +157,69 @@ done
 
 # ----- Prepare build scripts. -----
 
-build_script=$0
-if [[ "${build_script}" != /* ]]
+build_script_path=$0
+if [[ "${build_script_path}" != /* ]]
 then
   # Make relative path absolute.
-  build_script=$(pwd)/$0
+  build_script_path=$(pwd)/$0
 fi
 
 # Copy the current script to Work area, to later copy it into the install folder.
-mkdir -p "${WORK_FOLDER}/scripts"
-cp "${build_script}" "${WORK_FOLDER}/scripts/build-${APP_LC_NAME}.sh"
+mkdir -p "${WORK_FOLDER_PATH}/scripts"
+cp "${build_script_path}" "${WORK_FOLDER_PATH}/scripts/build-${APP_LC_NAME}.sh"
 
 # ----- Build helper. -----
 
-if [ -z "${helper_script}" ]
+if [ -z "${helper_script_path}" ]
 then
-  script_folder_path="$(dirname ${build_script})"
+  script_folder_path="$(dirname ${build_script_path})"
   script_folder_name="$(basename ${script_folder_path})"
   if [ \( "${script_folder_name}" == "scripts" \) \
     -a \( -f "${script_folder_path}/build-helper.sh" \) ]
   then
-    helper_script="${script_folder_path}/build-helper.sh"
-  elif [ ! -f "${WORK_FOLDER}/scripts/build-helper.sh" ]
+    helper_script_path="${script_folder_path}/build-helper.sh"
+  elif [ ! -f "${WORK_FOLDER_PATH}/scripts/build-helper.sh" ]
   then
     # Download helper script from GitHub git.
     echo "Downloading helper script..."
-    curl -L "https://github.com/gnuarmeclipse/build-scripts/raw/master/scripts/build-helper.sh" \
-      --output "${WORK_FOLDER}/scripts/build-helper.sh"
-    helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
+    curl -L "https://github.com/gnu-mcu-eclipse/build-scripts/raw/master/scripts/build-helper.sh" \
+      --output "${WORK_FOLDER_PATH}/scripts/build-helper.sh"
+    helper_script_path="${WORK_FOLDER_PATH}/scripts/build-helper.sh"
   else
-    helper_script="${WORK_FOLDER}/scripts/build-helper.sh"
+    helper_script_path="${WORK_FOLDER_PATH}/scripts/build-helper.sh"
   fi
 else
-  if [[ "${helper_script}" != /* ]]
+  if [[ "${helper_script_path}" != /* ]]
   then
     # Make relative path absolute.
-    helper_script="$(pwd)/${helper_script}"
+    helper_script_path="$(pwd)/${helper_script_path}"
   fi
 fi
 
 # Copy the current helper script to Work area, to later copy it into the install folder.
-mkdir -p "${WORK_FOLDER}/scripts"
-if [ "${helper_script}" != "${WORK_FOLDER}/scripts/build-helper.sh" ]
+mkdir -p "${WORK_FOLDER_PATH}/scripts"
+if [ "${helper_script_path}" != "${WORK_FOLDER_PATH}/scripts/build-helper.sh" ]
 then
-  cp "${helper_script}" "${WORK_FOLDER}/scripts/build-helper.sh"
+  cp "${helper_script_path}" "${WORK_FOLDER_PATH}/scripts/build-helper.sh"
 fi
 
-echo "Helper script: \"${helper_script}\"."
-source "$helper_script"
+echo "Helper script: \"${helper_script_path}\"."
+source "$helper_script_path"
 
 # ----- Library sources. -----
 
 # For updates, please check the corresponding pages.
+
+# The custom QEMU branch is available from the dedicated Git repository
+# which is part of the GNU MCU Eclipse project hosted on GitHub.
+# Generally this branch follows the official QEMU master branch,
+# with updates after every QEMU public release.
+
+QEMU_FOLDER_NAME="qemu.git"
+QEMU_GIT_URL="https://github.com/gnu-mcu-eclipse/qemu.git"
+QEMU_GIT_BRANCH="gnuarmeclipse"
+QEMU_GIT_BRANCH_DEV="gnuarmeclipse-dev"
+QEMU_GIT_COMMIT="HEAD"
 
 # http://zlib.net
 # https://sourceforge.net/projects/libpng/files/zlib/
@@ -351,6 +366,11 @@ LIBPIXMAN_FOLDER="pixman-${LIBPIXMAN_VERSION}"
 LIBPIXMAN_ARCHIVE="${LIBPIXMAN_FOLDER}.tar.gz"
 LIBPIXMAN_URL="http://cairographics.org/releases/${LIBPIXMAN_ARCHIVE}"
 
+# ----- Define build constants. -----
+
+
+DOWNLOAD_FOLDER_PATH="${WORK_FOLDER_PATH}/download"
+
 
 # ----- Process actions. -----
 
@@ -364,32 +384,34 @@ then
     echo "Remove most of the build folders (except output)..."
   fi
 
-  rm -rf "${BUILD_FOLDER}"
-  rm -rf "${WORK_FOLDER}/install"
+  rm -rf "${BUILD_FOLDER_PATH}"
+  rm -rf "${WORK_FOLDER_PATH}/install"
 
-  rm -rf "${WORK_FOLDER}/${LIBZ_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBPNG_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBJPG_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBFFI_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBICONV_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBGETTEXT_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBPCRE_FOLDER}"
-  rm -rf "${WORK_FOLDER}/${LIBGLIB_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBZ_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBPNG_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBJPG_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBFFI_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBICONV_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBGETTEXT_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBPCRE_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBGLIB_FOLDER}"
   if [ "${LIBSDL_ABI}" == "2.0" ]
   then
-    rm -rf "${WORK_FOLDER}/${LIBSDL2_FOLDER}"
-    rm -rf "${WORK_FOLDER}/${LIBSDL2_IMAGE_FOLDER}"
+    rm -rf "${WORK_FOLDER_PATH}/${LIBSDL2_FOLDER}"
+    rm -rf "${WORK_FOLDER_PATH}/${LIBSDL2_IMAGE_FOLDER}"
   else
-    rm -rf "${WORK_FOLDER}/${LIBSDL1_FOLDER}"
-    rm -rf "${WORK_FOLDER}/${LIBSDL1_IMAGE_FOLDER}"
+    rm -rf "${WORK_FOLDER_PATH}/${LIBSDL1_FOLDER}"
+    rm -rf "${WORK_FOLDER_PATH}/${LIBSDL1_IMAGE_FOLDER}"
   fi
-  rm -rf "${WORK_FOLDER}/${LIBPIXMAN_FOLDER}"
+  rm -rf "${WORK_FOLDER_PATH}/${LIBPIXMAN_FOLDER}"
 
-  rm -rf "${WORK_FOLDER}/scripts"
+  rm -rf "${WORK_FOLDER_PATH}/scripts"
 
   if [ "${ACTION}" == "cleanall" ]
   then
-    rm -rf "${WORK_FOLDER}/output"
+    rm -rf "${PROJECT_GIT_FOLDER_PATH}"
+    rm -rf "${WORK_FOLDER_PATH}/${OPENOCD_FOLDER_NAME}"
+    rm -rf "${WORK_FOLDER_PATH}/output"
   fi
 
   echo
@@ -404,17 +426,9 @@ do_host_start_timer
 
 do_host_detect
 
-# ----- Define build constants. -----
-
-GIT_FOLDER="${WORK_FOLDER}/gnuarmeclipse-${APP_LC_NAME}.git"
-
-DOWNLOAD_FOLDER="${WORK_FOLDER}/download"
-
-
 # ----- Prepare prerequisites. -----
 
 do_host_prepare_prerequisites
-
 
 # ----- Process "preload-images" action. -----
 
@@ -474,7 +488,7 @@ then
   exit 0
 fi
 
-# ----- Start Docker, if needed. -----
+# ----- Prepare Docker, if needed. -----
 
 if [ -n "${DO_BUILD_WIN32}${DO_BUILD_WIN64}${DO_BUILD_DEB32}${DO_BUILD_DEB64}" ]
 then
@@ -509,6 +523,20 @@ then
   exit 1
 fi
 
+# ----- Get the project git repository. -----
+
+if [ ! -d "${PROJECT_GIT_FOLDER_PATH}" ]
+then
+
+  cd "${WORK_FOLDER_PATH}"
+
+  echo "If asked, enter ${USER} GitHub password for git clone"
+  git clone "${PROEJCT_GIT_URL}" "${PROJECT_GIT_FOLDER_PATH}"
+
+fi
+
+# ----- Process "pull|checkout-dev|checkout-stable" actions. -----
+
 do_repo_action() {
 
   # $1 = action (pull, checkout-dev, checkout-stable)
@@ -526,7 +554,7 @@ do_repo_action() {
     echo "Running git checkout gnuarmeclipse & pull..."
   fi
 
-  if [ -d "${GIT_FOLDER}" ]
+  if [ -d "${PROJECT_GIT_FOLDER_PATH}" ]
   then
     echo
     if [ "${USER}" == "ilg" ]
@@ -534,7 +562,7 @@ do_repo_action() {
       echo "If asked, enter password for git pull"
     fi
 
-    cd "${GIT_FOLDER}"
+    cd "${PROJECT_GIT_FOLDER_PATH}"
 
     if [ "${ACTION}" == "checkout-dev" ]
     then
@@ -544,13 +572,24 @@ do_repo_action() {
       git checkout gnuarmeclipse
     fi
 
-    git pull
-    git submodule update --init dtc
+    if false
+    then
 
-    rm -rf "${BUILD_FOLDER}/${APP_LC_NAME}"
+      git pull
+      git submodule update --init dtc
 
-    echo
-    echo "Pull completed. Proceed with a regular build."
+      rm -rf "${BUILD_FOLDER_PATH}/${APP_LC_NAME}"
+
+      echo
+      echo "Pull completed. Proceed with a regular build."
+
+    else
+
+      echo "Not implemented."
+      exit 1
+
+    fi
+
     exit 0
   else
 	echo "No git folder."
@@ -573,52 +612,45 @@ case "${ACTION}" in
 esac
 
 
-# ----- Get the GNU ARM Eclipse QEMU git repository. -----
-
-# The custom QEMU branch is available from the dedicated Git repository
-# which is part of the GNU ARM Eclipse project hosted on GitHub.
-# Generally this branch follows the official QEMU master branch,
-# with updates after every QEMU public release.
-
-if [ ! -d "${GIT_FOLDER}" ]
-then
-
-  cd "${WORK_FOLDER}"
-
-  if [ "${USER}" == "ilg" ]
-  then
-    # Shortcut for ilg, who has full access to the repo.
-    echo
-    echo "If asked, enter ${USER} GitHub password for git clone"
-    git clone https://github.com/gnuarmeclipse/qemu.git gnuarmeclipse-${APP_LC_NAME}.git
-  else
-    # For regular read/only access, use the http url.
-    git clone http://github.com/gnuarmeclipse/qemu.git gnuarmeclipse-${APP_LC_NAME}.git
-  fi
-
-  # Change to the gnuarmeclipse branch. On subsequent runs use "git pull".
-  cd "${GIT_FOLDER}"
-  git checkout gnuarmeclipse-dev
-  git submodule update --init dtc
-
-fi
-
 # ----- Get the current Git branch name. -----
 
+# Get the current Git branch name, to know if we are building the stable or
+# the development release.
 do_host_get_git_head
 
 # ----- Get current date. -----
 
+# Use the UTC date as version in the name of the distribution file.
 do_host_get_current_date
+
+# ----- Get QEMU. -----
+
+if [ ! -d "${WORK_FOLDER_PATH}/${QEMU_FOLDER_NAME}" ]
+then
+
+  echo
+  echo "Cloning '${QEMU_GIT_URL}'..."
+
+  cd "${WORK_FOLDER_PATH}"
+  git clone --branch "${QEMU_GIT_BRANCH_DEV}" "${QEMU_GIT_URL}" "${QEMU_FOLDER_NAME}"
+  cd "${QEMU_FOLDER_NAME}"
+  git checkout -qf "${QEMU_GIT_COMMIT}"
+
+  # git submodule update --init --recursive --remote
+  git submodule update --init dtc
+
+  # do_host_bootstrap
+
+fi
 
 # ----- Get the Z library. -----
 
 # Download the Z library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBZ_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBZ_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBZ_ARCHIVE}\"..."
   curl -L "${LIBZ_URL}" --output "${LIBZ_ARCHIVE}"
 fi
@@ -628,45 +660,45 @@ fi
 # ----- Get the PNG library. -----
 
 # Download the PNG library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBPNG_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBPNG_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBPNG_ARCHIVE}\"..."
   curl -L "${LIBPNG_URL}" --output "${LIBPNG_ARCHIVE}"
 fi
 
 # Unpack the PNG library.
-if [ ! -d "${WORK_FOLDER}/${LIBPNG_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBPNG_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBPNG_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xzvf "${DOWNLOAD_FOLDER_PATH}/${LIBPNG_ARCHIVE}"
 
-  cd "${WORK_FOLDER}/${LIBPNG_FOLDER}"
-  #patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/xxx.patch"
+  cd "${WORK_FOLDER_PATH}/${LIBPNG_FOLDER}"
+  #patch -p0 -u --verbose < "${PROJECT_GIT_FOLDER_PATH}/gnu-mcu-eclipse/patches/xxx.patch"
 fi
 
 # ----- Get the JPG library. -----
 
 # Download the JPG library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBJPG_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBJPG_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBJPG_ARCHIVE}\"..."
   curl -L "${LIBJPG_URL}" --output "${LIBJPG_ARCHIVE}"
 fi
 
 # Unpack the JPG library.
-if [ ! -d "${WORK_FOLDER}/${LIBJPG_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBJPG_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBJPG_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xzvf "${DOWNLOAD_FOLDER_PATH}/${LIBJPG_ARCHIVE}"
 
-  cd "${WORK_FOLDER}/${LIBJPG_FOLDER}"
-  #patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/xxx.patch"
+  cd "${WORK_FOLDER_PATH}/${LIBJPG_FOLDER}"
+  #patch -p0 -u --verbose < "${PROJECT_GIT_FOLDER_PATH}/gnu-mcu-eclipse/patches/xxx.patch"
 fi
 
 # ----- Get the SDL 1.x libraries. -----
@@ -675,53 +707,53 @@ if [ "${LIBSDL_ABI}" == "1.2" ]
 then
 
 # Download the SDL 1.x library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL1_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBSDL1_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBSDL1_ARCHIVE}\"..."
   curl -L "${LIBSDL1_URL}" --output "${LIBSDL1_ARCHIVE}"
 fi
 
 # Unpack the SDL 1.x library.
-if [ ! -d "${WORK_FOLDER}/${LIBSDL1_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBSDL1_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL1_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xzvf "${DOWNLOAD_FOLDER_PATH}/${LIBSDL1_ARCHIVE}"
 
-  cd "${WORK_FOLDER}/${LIBSDL1_FOLDER}"
+  cd "${WORK_FOLDER_PATH}/${LIBSDL1_FOLDER}"
 
   echo
   echo "applying patch sdl-${LIBSDL1_VERSION}-no-CGDirectPaletteRef.patch..."
-  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-${LIBSDL1_VERSION}-no-CGDirectPaletteRef.patch"
+  patch -p0 -u --verbose < "${PROJECT_GIT_FOLDER_PATH}/gnu-mcu-eclipse/patches/sdl-${LIBSDL1_VERSION}-no-CGDirectPaletteRef.patch"
 
   echo
   echo "applying patch ssdl-${LIBSDL1_VERSION}-x11.patch..."
-  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-${LIBSDL1_VERSION}-x11.patch"
+  patch -p0 -u --verbose < "${PROJECT_GIT_FOLDER_PATH}/gnu-mcu-eclipse/patches/sdl-${LIBSDL1_VERSION}-x11.patch"
 fi
 
 # Download the SDL_image 1.x library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL1_IMAGE_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBSDL1_IMAGE_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBSDL1_IMAGE_ARCHIVE}\"..."
   curl -L "${LIBSDL1_IMAGE_URL}" --output "${LIBSDL1_IMAGE_ARCHIVE}"
 fi
 
 # Unpack the SDL_image 1.x library.
-if [ ! -d "${WORK_FOLDER}/${LIBSDL1_IMAGE_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBSDL1_IMAGE_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL1_IMAGE_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xzvf "${DOWNLOAD_FOLDER_PATH}/${LIBSDL1_IMAGE_ARCHIVE}"
 
-  cd "${WORK_FOLDER}/${LIBSDL1_IMAGE_FOLDER}"
+  cd "${WORK_FOLDER_PATH}/${LIBSDL1_IMAGE_FOLDER}"
 
   echo
   echo "Applying patch sdl-image-${LIBSDL1_IMAGE_VERSION}-setjmp.patch..."
-  patch -p0 -u --verbose < "${GIT_FOLDER}/gnuarmeclipse/patches/sdl-image-${LIBSDL1_IMAGE_VERSION}-setjmp.patch"
+  patch -p0 -u --verbose < "${PROJECT_GIT_FOLDER_PATH}/gnu-mcu-eclipse/patches/sdl-image-${LIBSDL1_IMAGE_VERSION}-setjmp.patch"
 
 fi
 
@@ -733,42 +765,42 @@ then
 # ----- Get the SDL 2.x libraries. -----
 
 # Download the SDL 2.x library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL2_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBSDL2_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBSDL2_ARCHIVE}\"..."
   curl -L "${LIBSDL2_URL}" --output "${LIBSDL2_ARCHIVE}"
 fi
 
 # Unpack the SDL 2.x library.
-if [ ! -d "${WORK_FOLDER}/${LIBSDL2_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBSDL2_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL2_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xzvf "${DOWNLOAD_FOLDER_PATH}/${LIBSDL2_ARCHIVE}"
 
-  cd "${WORK_FOLDER}/${LIBSDL2_FOLDER}"
+  cd "${WORK_FOLDER_PATH}/${LIBSDL2_FOLDER}"
   # Add patches here, if needed.
 fi
 
 # Download the SDL_image 2.x library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBSDL2_IMAGE_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBSDL2_IMAGE_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBSDL2_IMAGE_ARCHIVE}\"..."
   curl -L "${LIBSDL2_IMAGE_URL}" --output "${LIBSDL2_IMAGE_ARCHIVE}"
 fi
 
 # Unpack the SDL_image 2.x library.
-if [ ! -d "${WORK_FOLDER}/${LIBSDL2_IMAGE_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBSDL2_IMAGE_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBSDL2_IMAGE_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xzvf "${DOWNLOAD_FOLDER_PATH}/${LIBSDL2_IMAGE_ARCHIVE}"
 
-  cd "${WORK_FOLDER}/${LIBSDL2_IMAGE_FOLDER}"
+  cd "${WORK_FOLDER_PATH}/${LIBSDL2_IMAGE_FOLDER}"
   # Add patches here, if needed.
 fi
 
@@ -777,58 +809,58 @@ fi
 # ----- Get the FFI library. -----
 
 # Download the FFI library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBFFI_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBFFI_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBFFI_ARCHIVE}\"..."
   curl -L "${LIBFFI_URL}" --output "${LIBFFI_ARCHIVE}"
 fi
 
 # Unpack the FFI library.
-if [ ! -d "${WORK_FOLDER}/${LIBFFI_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBFFI_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBFFI_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xzvf "${DOWNLOAD_FOLDER_PATH}/${LIBFFI_ARCHIVE}"
 fi
 
 # ----- Get the ICONV library. -----
 
 # Download the ICONV library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBICONV_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBICONV_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBICONV_ARCHIVE}\"..."
   curl -L "${LIBICONV_URL}" --output "${LIBICONV_ARCHIVE}"
 fi
 
 # Unpack the ICONV library.
-if [ ! -d "${WORK_FOLDER}/${LIBICONV_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBICONV_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBICONV_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xzvf "${DOWNLOAD_FOLDER_PATH}/${LIBICONV_ARCHIVE}"
 fi
 
 # ----- Get the GETTEXT library. -----
 
 # Download the GETTEXT library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBGETTEXT_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBGETTEXT_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBGETTEXT_ARCHIVE}\"..."
   curl -L "${LIBGETTEXT_URL}" --output "${LIBGETTEXT_ARCHIVE}"
 fi
 
 # Unpack the GETTEXT library.
-if [ ! -d "${WORK_FOLDER}/${LIBGETTEXT_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBGETTEXT_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xvf "${DOWNLOAD_FOLDER}/${LIBGETTEXT_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xvf "${DOWNLOAD_FOLDER_PATH}/${LIBGETTEXT_ARCHIVE}"
 fi
 
 # ----- Get the PCRE library. -----
@@ -837,20 +869,20 @@ if false
 then
 
 # Download the GLIB library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBPCRE_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBPCRE_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBPCRE_ARCHIVE}\"..."
   curl -L "${LIBPCRE_URL}" --output "${LIBPCRE_ARCHIVE}"
 fi
 
 # Unpack the PCRE library.
-if [ ! -d "${WORK_FOLDER}/${LIBPCRE_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBPCRE_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xvf "${DOWNLOAD_FOLDER}/${LIBPCRE_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xvf "${DOWNLOAD_FOLDER_PATH}/${LIBPCRE_ARCHIVE}"
 fi
 
 fi
@@ -858,39 +890,39 @@ fi
 # ----- Get the GLIB library. -----
 
 # Download the GLIB library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBGLIB_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBGLIB_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBGLIB_ARCHIVE}\"..."
   curl -L "${LIBGLIB_URL}" --output "${LIBGLIB_ARCHIVE}"
 fi
 
 # Unpack the GLIB library.
-if [ ! -d "${WORK_FOLDER}/${LIBGLIB_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBGLIB_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xvf "${DOWNLOAD_FOLDER}/${LIBGLIB_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xvf "${DOWNLOAD_FOLDER_PATH}/${LIBGLIB_ARCHIVE}"
 fi
 
 # ----- Get the PIXMAN library. -----
 
 # Download the PIXMAN library.
-if [ ! -f "${DOWNLOAD_FOLDER}/${LIBPIXMAN_ARCHIVE}" ]
+if [ ! -f "${DOWNLOAD_FOLDER_PATH}/${LIBPIXMAN_ARCHIVE}" ]
 then
-  mkdir -p "${DOWNLOAD_FOLDER}"
+  mkdir -p "${DOWNLOAD_FOLDER_PATH}"
 
-  cd "${DOWNLOAD_FOLDER}"
+  cd "${DOWNLOAD_FOLDER_PATH}"
   echo "Downloading \"${LIBPIXMAN_ARCHIVE}\"..."
   curl -L "${LIBPIXMAN_URL}" --output "${LIBPIXMAN_ARCHIVE}"
 fi
 
 # Unpack the PIXMAN library.
-if [ ! -d "${WORK_FOLDER}/${LIBPIXMAN_FOLDER}" ]
+if [ ! -d "${WORK_FOLDER_PATH}/${LIBPIXMAN_FOLDER}" ]
 then
-  cd "${WORK_FOLDER}"
-  tar -xvf "${DOWNLOAD_FOLDER}/${LIBPIXMAN_ARCHIVE}"
+  cd "${WORK_FOLDER_PATH}"
+  tar -xvf "${DOWNLOAD_FOLDER_PATH}/${LIBPIXMAN_ARCHIVE}"
 fi
 
 # ----- Here insert the code to perform other downloads, if needed. -----
@@ -899,14 +931,14 @@ fi
 # Create the build script (needs to be separate for Docker).
 
 script_name="build.sh"
-script_file="${WORK_FOLDER}/scripts/${script_name}"
+script_file_path="${WORK_FOLDER_PATH}/scripts/${script_name}"
 
-rm -f "${script_file}"
-mkdir -p "$(dirname ${script_file})"
-touch "${script_file}"
+rm -f "${script_file_path}"
+mkdir -p "$(dirname ${script_file_path})"
+touch "${script_file_path}"
 
 # Note: EOF is quoted to prevent substitutions here.
-cat <<'EOF' >> "${script_file}"
+cat <<'EOF' >> "${script_file_path}"
 #!/usr/bin/env bash
 
 # -----------------------------------------------------------------------------
@@ -932,13 +964,15 @@ EOF
 # The above marker must start in the first column.
 
 # Note: EOF is not quoted to allow local substitutions.
-cat <<EOF >> "${script_file}"
+cat <<EOF >> "${script_file_path}"
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
 APP_UC_NAME="${APP_UC_NAME}"
 GIT_HEAD="${GIT_HEAD}"
 DISTRIBUTION_FILE_DATE="${DISTRIBUTION_FILE_DATE}"
+PROJECT_GIT_FOLDER_NAME="${PROJECT_GIT_FOLDER_NAME}"
+QEMU_FOLDER_NAME="${QEMU_FOLDER_NAME}"
 
 LIBZ_FOLDER="${LIBZ_FOLDER}"
 LIBZ_ARCHIVE="${LIBZ_ARCHIVE}"
@@ -954,25 +988,25 @@ EOF
 if [ "${LIBSDL_ABI}" == "1.2" ]
 then
 
-  echo LIBSDL1_FOLDER="${LIBSDL1_FOLDER}" >> "${script_file}"
-  echo >> "${script_file}"
-  echo LIBSDL1_IMAGE_FOLDER="${LIBSDL1_IMAGE_FOLDER}" >> "${script_file}"
-  echo LIBSDL1_IMAGE_ARCHIVE="${LIBSDL1_IMAGE_ARCHIVE}" >> "${script_file}"
+  echo LIBSDL1_FOLDER="${LIBSDL1_FOLDER}" >> "${script_file_path}"
+  echo >> "${script_file_path}"
+  echo LIBSDL1_IMAGE_FOLDER="${LIBSDL1_IMAGE_FOLDER}" >> "${script_file_path}"
+  echo LIBSDL1_IMAGE_ARCHIVE="${LIBSDL1_IMAGE_ARCHIVE}" >> "${script_file_path}"
 
 fi
 
 if [ "${LIBSDL_ABI}" == "2.0" ]
 then
 
-  echo LIBSDL2_FOLDER="${LIBSDL2_FOLDER}" >> "${script_file}"
-  echo >> "${script_file}"
-  echo LIBSDL2_IMAGE_FOLDER="${LIBSDL2_IMAGE_FOLDER}" >> "${script_file}"
-  echo LIBSDL2_IMAGE_ARCHIVE="${LIBSDL2_IMAGE_ARCHIVE}" >> "${script_file}"
+  echo LIBSDL2_FOLDER="${LIBSDL2_FOLDER}" >> "${script_file_path}"
+  echo >> "${script_file_path}"
+  echo LIBSDL2_IMAGE_FOLDER="${LIBSDL2_IMAGE_FOLDER}" >> "${script_file_path}"
+  echo LIBSDL2_IMAGE_ARCHIVE="${LIBSDL2_IMAGE_ARCHIVE}" >> "${script_file_path}"
 
 fi
 
 # Note: EOF is not quoted to allow local substitutions.
-cat <<EOF >> "${script_file}"
+cat <<EOF >> "${script_file_path}"
 
 LIBFFI_FOLDER="${LIBFFI_FOLDER}"
 LIBICONV_FOLDER="${LIBICONV_FOLDER}"
@@ -993,7 +1027,7 @@ then
   set +u
   if [ ! -z ${MACPORTS_FOLDER} ]
   then
-    echo MACPORTS_FOLDER="${MACPORTS_FOLDER}" >> "${script_file}"
+    echo MACPORTS_FOLDER="${MACPORTS_FOLDER}" >> "${script_file_path}"
   fi
   set -u
 
@@ -1003,19 +1037,21 @@ fi
 set +u
 if [[ ! -z ${DEBUG} ]]
 then
-  echo "DEBUG=${DEBUG}" "${script_file}"
+  echo "DEBUG=${DEBUG}" "${script_file_path}"
   echo
 fi
 set -u
 
 # Note: EOF is quoted to prevent substitutions here.
-cat <<'EOF' >> "${script_file}"
+cat <<'EOF' >> "${script_file_path}"
 
 PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR:-""}
 
 # For just in case.
 export LC_ALL="C"
 export CONFIG_SHELL="/bin/bash"
+
+jobs="--jobs=8"
 
 script_name="$(basename "$0")"
 args="$@"
@@ -1025,7 +1061,7 @@ while [ $# -gt 0 ]
 do
   case "$1" in
     --build-folder)
-      build_folder="$2"
+      build_folder_path="$2"
       shift 2
       ;;
     --docker-container-name)
@@ -1041,11 +1077,11 @@ do
       shift 2
       ;;
     --work-folder)
-      work_folder="$2"
+      work_folder_path="$2"
       shift 2
       ;;
     --output-folder)
-      output_folder="$2"
+      output_folder_path="$2"
       shift 2
       ;;
     --distribution-folder)
@@ -1061,7 +1097,7 @@ do
       shift 2
       ;;
     --helper-script)
-      helper_script="$2"
+      helper_script_path="$2"
       shift 2
       ;;
     --group-id)
@@ -1082,15 +1118,15 @@ do
   esac
 done
 
-git_folder="${work_folder}/gnuarmeclipse-${APP_LC_NAME}.git"
+download_folder_path=${download_folder_path:-"${work_folder_path}/download"}
 
-DOWNLOAD_FOLDER="${work_folder}/download"
+git_folder_path="${work_folder_path}/${PROJECT_GIT_FOLDER_NAME}"
 
 echo
 uname -a
 
 # Run the helper script in this shell, to get the support functions.
-source "${helper_script}"
+source "${helper_script_path}"
 
 target_folder=${target_name}${target_bits:-""}
 
@@ -1113,8 +1149,8 @@ then
 
 fi
 
-mkdir -p ${build_folder}
-cd ${build_folder}
+mkdir -p ${build_folder_path}
+cd ${build_folder_path}
 
 # ----- Test if various tools are present -----
 
@@ -1141,6 +1177,11 @@ then
 
   echo "Checking makensis..."
   echo "makensis $(makensis -VERSION)"
+
+  apt-get --yes install zip
+
+  echo "Checking zip..."
+  zip -v | grep "This is Zip"
 else
   echo "Checking gcc..."
   gcc --version 2>/dev/null | egrep -e 'gcc|clang'
@@ -1165,26 +1206,26 @@ fi
 
 # ----- Remove and recreate the output folder. -----
 
-rm -rf "${output_folder}"
-mkdir -p "${output_folder}"
+rm -rf "${output_folder_path}"
+mkdir -p "${output_folder_path}"
 
 # ----- Build and install the ZLIB library. -----
 
 if [ ! -f "${install_folder}/lib/libz.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBZ_FOLDER}"
-  mkdir -p "${build_folder}/${LIBZ_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBZ_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBZ_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running zlib configure..."
 
-  cd "${build_folder}"
-  tar -xzvf "${DOWNLOAD_FOLDER}/${LIBZ_ARCHIVE}"
+  cd "${build_folder_path}"
+  tar -xzvf "${download_folder_path}/${LIBZ_ARCHIVE}"
 
-  cd "${build_folder}/${LIBZ_FOLDER}"
+  cd "${build_folder_path}/${LIBZ_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
@@ -1194,7 +1235,7 @@ then
   elif [ "${target_name}" == "debian" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
     bash "configure" \
@@ -1203,7 +1244,7 @@ then
   elif [ "${target_name}" == "osx" ]
   then
     CFLAGS="-m${target_bits} -pipe -Wno-shift-negative-value" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
     bash "configure" \
@@ -1225,7 +1266,7 @@ then
     INCLUDE_PATH="${install_folder}/include" \
     LIBRARY_PATH="${install_folder}/lib" \
     BINARY_PATH="${install_folder}/bin" \
-    make -f win32/Makefile.gcc2 install
+    make "${jobs}" -f win32/Makefile.gcc2 install
 
   else
 
@@ -1240,25 +1281,25 @@ fi
 if [ ! -f "${install_folder}/lib/libpng.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBPNG_FOLDER}"
-  mkdir -p "${build_folder}/${LIBPNG_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBPNG_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBPNG_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libpng configure..."
 
-  cd "${build_folder}/${LIBPNG_FOLDER}"
+  cd "${build_folder_path}/${LIBPNG_FOLDER}"
 
   # The explicit folders are needed to find zlib, pkg-config not used for it.
   if [ "${target_name}" == "win" ]
   then
     CPPFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBPNG_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBPNG_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}"
 
@@ -1266,20 +1307,20 @@ then
   then
     CPPFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBPNG_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBPNG_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   elif [ "${target_name}" == "osx" ]
   then
     CPPFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBPNG_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBPNG_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   fi
@@ -1288,7 +1329,7 @@ then
   echo "Running libpng make install..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
 fi
 
@@ -1297,42 +1338,42 @@ fi
 if [ ! -f "${install_folder}/lib/libjpeg.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBJPG_FOLDER}"
-  mkdir -p "${build_folder}/${LIBJPG_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBJPG_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBJPG_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libjpg configure..."
 
-  cd "${build_folder}/${LIBJPG_FOLDER}"
+  cd "${build_folder_path}/${LIBJPG_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBJPG_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBJPG_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}"
 
   elif [ "${target_name}" == "debian" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBJPG_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBJPG_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   elif [ "${target_name}" == "osx" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBJPG_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBJPG_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   fi
@@ -1341,7 +1382,7 @@ then
   echo "Running libjpg make install..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
 fi
 
@@ -1353,23 +1394,23 @@ then
 if [ ! -f "${install_folder}/lib/libSDL.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBSDL1_FOLDER}"
-  mkdir -p "${build_folder}/${LIBSDL1_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBSDL1_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBSDL1_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libSDL 1.x configure..."
 
-  cd "${build_folder}/${LIBSDL1_FOLDER}"
+  cd "${build_folder_path}/${LIBSDL1_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL1_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL1_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" \
       \
@@ -1378,20 +1419,20 @@ then
   elif [ "${target_name}" == "debian" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL1_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL1_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   elif [ "${target_name}" == "osx" ]
   then
     # On macOS disable X11 support.
     CFLAGS="-m${target_bits} -pipe -Wno-deprecated-declarations" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL1_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL1_FOLDER}/configure" \
       --prefix="${install_folder}" \
       \
       --without-x 
@@ -1402,22 +1443,22 @@ then
   echo "Running libSDL 1.x make install..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
 fi
 
 if [ ! -f "${install_folder}/lib/libSDL_image.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBSDL1_IMAGE_FOLDER}"
-  mkdir -p "${build_folder}/${LIBSDL1_IMAGE_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBSDL1_IMAGE_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBSDL1_IMAGE_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libSDL_image 1.x configure..."
 
-  cd "${build_folder}/${LIBSDL1_IMAGE_FOLDER}"
+  cd "${build_folder_path}/${LIBSDL1_IMAGE_FOLDER}"
 
   # The explicit folders are needed to find jpeg, pkg-config not used for it.
   if [ "${target_name}" == "win" ]
@@ -1425,10 +1466,10 @@ then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
     LIBS="-lpng16 -ljpeg" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL1_IMAGE_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL1_IMAGE_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" \
       --with-gnu-ld \
@@ -1456,10 +1497,10 @@ then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
     LIBPNG_LIBS="-lpng16 -ljpeg" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL1_IMAGE_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL1_IMAGE_FOLDER}/configure" \
       --prefix="${install_folder}" \
       --with-gnu-ld \
       \
@@ -1486,10 +1527,10 @@ then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
     LIBS="-lpng16 -ljpeg" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL1_IMAGE_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL1_IMAGE_FOLDER}/configure" \
       --prefix="${install_folder}" \
       \
       --enable-jpg \
@@ -1516,7 +1557,7 @@ then
   echo "Running libSDL_image 1.x make install..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 fi
 
 fi
@@ -1529,33 +1570,33 @@ then
 if [ ! -f "${install_folder}/lib/libSDL2.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBSDL2_FOLDER}"
-  mkdir -p "${build_folder}/${LIBSDL2_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBSDL2_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBSDL2_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libSDL 2.x configure..."
 
-  cd "${build_folder}/${LIBSDL2_FOLDER}"
+  cd "${build_folder_path}/${LIBSDL2_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL2_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL2_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" 
 
   elif [ "${target_name}" == "debian" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL2_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL2_FOLDER}/configure" \
       --prefix="${install_folder}" \
       \
       --enable-video-opengl
@@ -1564,10 +1605,10 @@ then
   then
     # On macOS disable X11 support.
     CFLAGS="-m${target_bits} -pipe -Wno-deprecated-declarations" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL2_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL2_FOLDER}/configure" \
       --prefix="${install_folder}" \
       \
       --without-x 
@@ -1578,22 +1619,22 @@ then
   echo "Running libSDL 2.x make install..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
 fi
 
 if [ ! -f "${install_folder}/lib/libSDL2_image.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBSDL2_IMAGE_FOLDER}"
-  mkdir -p "${build_folder}/${LIBSDL2_IMAGE_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBSDL2_IMAGE_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBSDL2_IMAGE_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libSDL_image 2.x configure..."
 
-  cd "${build_folder}/${LIBSDL2_IMAGE_FOLDER}"
+  cd "${build_folder_path}/${LIBSDL2_IMAGE_FOLDER}"
 
   # The explicit folders are needed to find jpeg, pkg-config not used for it.
   if [ "${target_name}" == "win" ]
@@ -1601,10 +1642,10 @@ then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
     LIBS="-lpng16 -ljpeg" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL2_IMAGE_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL2_IMAGE_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" \
       --with-gnu-ld \
@@ -1632,10 +1673,10 @@ then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
     LIBPNG_LIBS="-lpng16 -ljpeg" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL2_IMAGE_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL2_IMAGE_FOLDER}/configure" \
       --prefix="${install_folder}" \
       --with-gnu-ld \
       \
@@ -1662,10 +1703,10 @@ then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include -Wno-macro-redefined" \
     LDFLAGS="-L${install_folder}/lib" \
     LIBS="-lpng16 -ljpeg" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBSDL2_IMAGE_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBSDL2_IMAGE_FOLDER}/configure" \
       --prefix="${install_folder}" \
       \
       --enable-jpg \
@@ -1692,7 +1733,7 @@ then
   echo "Running libSDL_image 2.x make install..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 fi
 
 fi
@@ -1702,42 +1743,42 @@ fi
 if [ ! -f "${install_folder}/lib/libffi.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBFFI_FOLDER}"
-  mkdir -p "${build_folder}/${LIBFFI_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBFFI_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBFFI_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libffi configure..."
 
-  cd "${build_folder}/${LIBFFI_FOLDER}"
+  cd "${build_folder_path}/${LIBFFI_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBFFI_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBFFI_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" \
 
   elif [ "${target_name}" == "debian" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBFFI_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBFFI_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   elif [ "${target_name}" == "osx" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBFFI_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBFFI_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   fi
@@ -1746,6 +1787,7 @@ then
   echo "Running libffi make install..."
 
   # Build.
+  # Warning: do not use parallel build!
   make clean install
 
 fi
@@ -1758,23 +1800,23 @@ then
 if [ ! -f "${install_folder}/lib/libiconv.la" ]
 then
 
-  rm -rf "${build_folder}/${LIBICONV_FOLDER}"
-  mkdir -p "${build_folder}/${LIBICONV_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBICONV_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBICONV_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libiconv configure..."
 
-  cd "${build_folder}/${LIBICONV_FOLDER}"
+  cd "${build_folder_path}/${LIBICONV_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBICONV_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBICONV_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" \
       --with-gnu-ld \
@@ -1784,10 +1826,10 @@ then
   elif [ "${target_name}" == "debian" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBICONV_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBICONV_FOLDER}/configure" \
       --prefix="${install_folder}" \
       --with-gnu-ld \
       \
@@ -1797,10 +1839,10 @@ then
   then
 
     CFLAGS="-m${target_bits} -pipe -Wno-tautological-compare -Wno-parentheses-equality -Wno-static-in-inline" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBICONV_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBICONV_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   fi
@@ -1809,7 +1851,7 @@ then
   echo "Running libiconv make install..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
 fi
 
@@ -1823,23 +1865,23 @@ then
 if [ ! -f "${install_folder}/lib/libintl.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBGETTEXT_FOLDER}"
-  mkdir -p "${build_folder}/${LIBGETTEXT_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBGETTEXT_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBGETTEXT_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running gettext configure..."
 
-  cd "${build_folder}/${LIBGETTEXT_FOLDER}"
+  cd "${build_folder_path}/${LIBGETTEXT_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBGETTEXT_FOLDER}/gettext-runtime/configure" \
+    bash "${work_folder_path}/${LIBGETTEXT_FOLDER}/gettext-runtime/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" \
       --with-gnu-ld \
@@ -1859,10 +1901,10 @@ then
   elif [ "${target_name}" == "debian" ]
   then
     CFLAGS="-m${target_bits} -pipe" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBGETTEXT_FOLDER}/gettext-runtime/configure" \
+    bash "${work_folder_path}/${LIBGETTEXT_FOLDER}/gettext-runtime/configure" \
       --prefix="${install_folder}" \
       --with-gnu-ld \
       \
@@ -1882,10 +1924,10 @@ then
   then
 
     CFLAGS="-m${target_bits} -pipe -Wno-format-extra-args" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBGETTEXT_FOLDER}/gettext-runtime/configure" \
+    bash "${work_folder_path}/${LIBGETTEXT_FOLDER}/gettext-runtime/configure" \
       --prefix="${install_folder}" \
       \
       --disable-java \
@@ -1906,6 +1948,7 @@ then
   echo "Running gettext make install..."
 
   # Build.
+  # Warning: do not use parallel build!
   make clean install
 
 fi
@@ -1920,24 +1963,24 @@ then
 if [ ! -f "${install_folder}/lib/libpcre.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBPCRE_FOLDER}"
-  mkdir -p "${build_folder}/${LIBPCRE_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBPCRE_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBPCRE_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libpcre configure..."
 
-  cd "${build_folder}/${LIBPCRE_FOLDER}"
+  cd "${build_folder_path}/${LIBPCRE_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBPCRE_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBPCRE_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" \
       --enable-unicode-properties \
@@ -1947,10 +1990,10 @@ then
   then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBPCRE_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBPCRE_FOLDER}/configure" \
       --prefix="${install_folder}" \
       --enable-unicode-properties \
       --enable-utf
@@ -1960,10 +2003,10 @@ then
     # To find libintl, add explicit paths.
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBPCRE_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBPCRE_FOLDER}/configure" \
       --prefix="${install_folder}" \
       --enable-unicode-properties \
       --enable-utf
@@ -1974,7 +2017,7 @@ then
   echo "Running libpcre make install..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
 fi
 
@@ -1985,24 +2028,24 @@ fi
 if [ ! -f "${install_folder}/lib/libglib-2.0.la" ]
 then
 
-  rm -rf "${build_folder}/${LIBGLIB_FOLDER}"
-  mkdir -p "${build_folder}/${LIBGLIB_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBGLIB_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBGLIB_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libglib configure..."
 
-  cd "${build_folder}/${LIBGLIB_FOLDER}"
+  cd "${build_folder_path}/${LIBGLIB_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBGLIB_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBGLIB_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}" \
       --without-pcre 
@@ -2011,10 +2054,10 @@ then
   then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBGLIB_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBGLIB_FOLDER}/configure" \
       --prefix="${install_folder}" \
       --without-pcre 
 
@@ -2023,10 +2066,10 @@ then
     # To find libintl, add explicit paths.
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include -Wno-int-conversion -Wno-tautological-constant-out-of-range-compare -Wno-deprecated-declarations -Wno-shift-negative-value -Wno-#warnings -Wno-self-assign" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBGLIB_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBGLIB_FOLDER}/configure" \
       --prefix="${install_folder}" \
       --without-pcre 
 
@@ -2036,7 +2079,7 @@ then
   echo "Running libglib make install..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
 fi
 
@@ -2045,24 +2088,24 @@ fi
 if [ ! -f "${install_folder}/lib/libpixman-1.a" ]
 then
 
-  rm -rf "${build_folder}/${LIBPIXMAN_FOLDER}"
-  mkdir -p "${build_folder}/${LIBPIXMAN_FOLDER}"
+  rm -rf "${build_folder_path}/${LIBPIXMAN_FOLDER}"
+  mkdir -p "${build_folder_path}/${LIBPIXMAN_FOLDER}"
 
   mkdir -p "${install_folder}"
 
   echo
   echo "Running libpixman configure..."
 
-  cd "${build_folder}/${LIBPIXMAN_FOLDER}"
+  cd "${build_folder_path}/${LIBPIXMAN_FOLDER}"
 
   if [ "${target_name}" == "win" ]
   then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBPIXMAN_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBPIXMAN_FOLDER}/configure" \
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}"
 
@@ -2070,10 +2113,10 @@ then
   then
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBPIXMAN_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBPIXMAN_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   elif [ "${target_name}" == "osx" ]
@@ -2081,10 +2124,10 @@ then
     # To find libintl, add explicit paths.
     CFLAGS="-m${target_bits} -pipe -I${install_folder}/include -Wno-unused-const-variable -Wno-shift-negative-value -Wno-tautological-constant-out-of-range-compare -Wno-unknown-attributes" \
     LDFLAGS="-L${install_folder}/lib" \
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${work_folder}/${LIBPIXMAN_FOLDER}/configure" \
+    bash "${work_folder_path}/${LIBPIXMAN_FOLDER}/configure" \
       --prefix="${install_folder}"
 
   fi
@@ -2093,7 +2136,7 @@ then
   echo "Running libpixman make install..."
 
   # Build.
-  make clean install
+  make "${jobs}" clean install
 
 fi
 
@@ -2101,11 +2144,11 @@ fi
 
 # ----- Create the build folder. -----
 
-mkdir -p "${build_folder}/${APP_LC_NAME}"
+mkdir -p "${build_folder_path}/${APP_LC_NAME}"
 
 # ----- Configure QEMU. -----
 
-if [ ! -f "${build_folder}/${APP_LC_NAME}/config-host.mak" ]
+if [ ! -f "${build_folder_path}/${APP_LC_NAME}/config-host.mak" ]
 then
 
   echo
@@ -2118,12 +2161,12 @@ then
   then
 
     # Windows target, 32/64-bit
-    cd "${build_folder}/${APP_LC_NAME}"
+    cd "${build_folder_path}/${APP_LC_NAME}"
 
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${git_folder}/configure" \
+    bash "${work_folder_path}/${QEMU_FOLDER_NAME}/configure" \
       --cross-prefix="${cross_compile_prefix}-" \
       \
       --extra-cflags="-g -pipe -I${install_folder}/include -Wno-missing-format-attribute -Wno-pointer-to-int-cast -D_POSIX=1 -mthreads" \
@@ -2136,18 +2179,18 @@ then
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
       \
       --with-sdlabi="${LIBSDL_ABI}" \
-      | tee "${output_folder}/configure-output.txt"
+      | tee "${output_folder_path}/configure-output.txt"
 
   elif [ "${target_name}" == "debian" ]
   then
 
     # Linux target
-    cd "${build_folder}/${APP_LC_NAME}"
+    cd "${build_folder_path}/${APP_LC_NAME}"
 
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${git_folder}/configure" \
+    bash "${work_folder_path}/${QEMU_FOLDER_NAME}/configure" \
       --extra-cflags="-g -pipe -I${install_folder}/include -Wno-missing-format-attribute -Wno-error=format=" \
       --disable-werror \
       --extra-ldflags="-v -L${install_folder}/lib" \
@@ -2158,18 +2201,18 @@ then
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
       \
       --with-sdlabi="${LIBSDL_ABI}" \
-    | tee "${output_folder}/configure-output.txt"
+    | tee "${output_folder_path}/configure-output.txt"
 
   elif [ "${target_name}" == "osx" ]
   then
 
     # OS X target
-    cd "${build_folder}/${APP_LC_NAME}"
+    cd "${build_folder_path}/${APP_LC_NAME}"
 
-    PKG_CONFIG="${git_folder}/gnuarmeclipse/scripts/pkg-config-dbg" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/pkg-config-dbg" \
     PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
     \
-    bash "${git_folder}/configure" \
+    bash "${work_folder_path}/${QEMU_FOLDER_NAME}/configure" \
       --extra-cflags="-g -pipe -I${install_folder}/include -Wno-missing-format-attribute" \
       --disable-werror \
       --extra-ldflags="-v -L${install_folder}/lib" \
@@ -2180,29 +2223,29 @@ then
       --mandir="${install_folder}/${APP_LC_NAME}/man" \
       \
       --with-sdlabi="${LIBSDL_ABI}" \
-    | tee "${output_folder}/configure-output.txt"
+    | tee "${output_folder_path}/configure-output.txt"
 
     # Configure fails for --static
 
   fi
 
-fi
+  cd "${build_folder_path}/${APP_LC_NAME}"
+  cp config.* "${output_folder_path}"
 
-cd "${build_folder}/${APP_LC_NAME}"
-cp config.* "${output_folder}"
+fi
 
 # ----- Full build, with documentation. -----
 
-if [ ! \( -f "${build_folder}/${APP_LC_NAME}/gnuarmeclipse-softmmu/qemu-system-gnuarmeclipse" \) -a \
-     ! \( -f "${build_folder}/${APP_LC_NAME}/gnuarmeclipse-softmmu/qemu-system-gnuarmeclipse.exe" \) ]
+if [ ! \( -f "${build_folder_path}/${APP_LC_NAME}/gnuarmeclipse-softmmu/qemu-system-gnuarmeclipse" \) -a \
+     ! \( -f "${build_folder_path}/${APP_LC_NAME}/gnuarmeclipse-softmmu/qemu-system-gnuarmeclipse.exe" \) ]
 then
 
   echo
   echo "Running QEMU make all..."
 
-  cd "${build_folder}/${APP_LC_NAME}"
-  make all pdf \
-  | tee "${output_folder}/make-all-output.txt"
+  cd "${build_folder_path}/${APP_LC_NAME}"
+  make "${jobs}" all pdf \
+  | tee "${output_folder_path}/make-all-output.txt"
 
 fi
 
@@ -2216,10 +2259,10 @@ rm -rf "${install_folder}/${APP_LC_NAME}"
 
 # Exhaustive install, including documentation.
 
-cd "${build_folder}/${APP_LC_NAME}"
-make install install-pdf
+cd "${build_folder_path}/${APP_LC_NAME}"
+make "${jobs}" install install-pdf
 
-# cd "${build_folder}/${APP_LC_NAME}/pixman"
+# cd "${build_folder_path}/${APP_LC_NAME}/pixman"
 # make install
 
 
@@ -2402,26 +2445,26 @@ then
   do_container_mac_change_built_lib libglib-2.0.0.dylib
   do_container_mac_change_built_lib libintl.8.dylib
   do_container_mac_change_built_lib libpixman-1.0.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   if [ "${LIBSDL_ABI}" == "1.2" ]
   then
 
     do_container_mac_copy_built_lib libSDL-1.2.0.dylib
-    do_container_mac_check_lib
+    do_container_mac_check_libs
 
     do_container_mac_copy_built_lib libSDL_image-1.2.0.dylib
     do_container_mac_change_built_lib libSDL-1.2.0.dylib
     do_container_mac_change_built_lib libpng16.16.dylib
     do_container_mac_change_built_lib libjpeg.9.dylib
     do_container_mac_change_built_lib libz.1.dylib
-    do_container_mac_check_lib
+    do_container_mac_check_libs
 
   elif [ "${LIBSDL_ABI}" == "2.0" ]
   then
 
     do_container_mac_copy_built_lib libSDL2-2.0.0.dylib
-    do_container_mac_check_lib
+    do_container_mac_check_libs
 
     do_container_mac_copy_built_lib libSDL2_image-2.0.0.dylib
     do_container_mac_change_built_lib libSDL2-2.0.0.dylib
@@ -2429,64 +2472,64 @@ then
     do_container_mac_change_built_lib libjpeg.9.dylib
     do_container_mac_change_built_lib libz.1.dylib
     do_container_mac_change_built_lib libiconv.2.dylib
-    do_container_mac_check_lib
+    do_container_mac_check_libs
 
   fi
 
   do_container_mac_copy_built_lib libpng16.16.dylib
   do_container_mac_change_built_lib libz.1.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libjpeg.9.dylib
   do_container_mac_change_built_lib libz.1.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libffi.6.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libiconv.2.dylib 
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libintl.8.dylib
   do_container_mac_change_built_lib libiconv.2.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libglib-2.0.0.dylib
   # do_container_mac_change_built_lib libpcre.1.dylib
   do_container_mac_change_built_lib libiconv.2.dylib
   do_container_mac_change_built_lib libintl.8.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libgthread-2.0.0.dylib
   do_container_mac_change_built_lib libglib-2.0.0.dylib
   do_container_mac_change_built_lib libiconv.2.dylib
   do_container_mac_change_built_lib libintl.8.dylib
   # do_container_mac_change_built_lib libpcre.1.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   # do_container_mac_copy_built_lib libpcre.1.dylib
-  # do_container_mac_check_lib
+  # do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libz.1.dylib
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
   do_container_mac_copy_built_lib libpixman-1.0.dylib  
-  do_container_mac_check_lib
+  do_container_mac_check_libs
 
 fi
 
 # ----- Copy the devices JSON files. -----
 
 mkdir -p "${install_folder}/${APP_LC_NAME}/share/qemu/devices"
-cp "${git_folder}/gnuarmeclipse/devices/"*.json \
+cp "${git_folder_path}/gnu-mcu-eclipse/devices/"*.json \
   "${install_folder}/${APP_LC_NAME}/share/qemu/devices"
-cp "${git_folder}/gnuarmeclipse/devices/"README.md \
+cp "${git_folder_path}/gnu-mcu-eclipse/devices/"README.md \
   "${install_folder}/${APP_LC_NAME}/share/qemu/devices"
 
 # ----- Copy the board picture files. -----
 
 mkdir -p "${install_folder}/${APP_LC_NAME}/share/qemu/graphics"
-cp "${git_folder}/gnuarmeclipse/graphics/"*.jpg \
+cp "${git_folder_path}/gnu-mcu-eclipse/graphics/"*.jpg \
   "${install_folder}/${APP_LC_NAME}/share/qemu/graphics"
 
 # ----- Copy the license files. -----
@@ -2494,32 +2537,32 @@ cp "${git_folder}/gnuarmeclipse/graphics/"*.jpg \
 echo
 echo "Copying license files..."
 
-do_container_copy_license "${git_folder}" "qemu-$(cat ${git_folder}/VERSION)"
-do_container_copy_license "${work_folder}/${LIBGETTEXT_FOLDER}" "${LIBGETTEXT_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBGLIB_FOLDER}" "${LIBGLIB_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBPNG_FOLDER}" "${LIBPNG_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBJPG_FOLDER}" "${LIBJPG_FOLDER}"
+do_container_copy_license "${git_folder_path}" "qemu-$(cat ${git_folder_path}/VERSION)"
+do_container_copy_license "${work_folder_path}/${LIBGETTEXT_FOLDER}" "${LIBGETTEXT_FOLDER}"
+do_container_copy_license "${work_folder_path}/${LIBGLIB_FOLDER}" "${LIBGLIB_FOLDER}"
+do_container_copy_license "${work_folder_path}/${LIBPNG_FOLDER}" "${LIBPNG_FOLDER}"
+do_container_copy_license "${work_folder_path}/${LIBJPG_FOLDER}" "${LIBJPG_FOLDER}"
 
 if [ "${LIBSDL_ABI}" == "1.2" ]
 then
 
-  do_container_copy_license "${work_folder}/${LIBSDL1_FOLDER}" "${LIBSDL1_FOLDER}"
-  do_container_copy_license "${work_folder}/${LIBSDL1_IMAGE_FOLDER}" "${LIBSDL1_IMAGE_FOLDER}"
+  do_container_copy_license "${work_folder_path}/${LIBSDL1_FOLDER}" "${LIBSDL1_FOLDER}"
+  do_container_copy_license "${work_folder_path}/${LIBSDL1_IMAGE_FOLDER}" "${LIBSDL1_IMAGE_FOLDER}"
 
 elif [ "${LIBSDL_ABI}" == "2.0" ]
 then
 
-  do_container_copy_license "${work_folder}/${LIBSDL2_FOLDER}" "${LIBSDL2_FOLDER}"
-  do_container_copy_license "${work_folder}/${LIBSDL2_IMAGE_FOLDER}" "${LIBSDL2_IMAGE_FOLDER}"
+  do_container_copy_license "${work_folder_path}/${LIBSDL2_FOLDER}" "${LIBSDL2_FOLDER}"
+  do_container_copy_license "${work_folder_path}/${LIBSDL2_IMAGE_FOLDER}" "${LIBSDL2_IMAGE_FOLDER}"
 
 fi
-do_container_copy_license "${work_folder}/${LIBFFI_FOLDER}" "${LIBFFI_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBZ_FOLDER}" "${LIBZ_FOLDER}"
-do_container_copy_license "${work_folder}/${LIBPIXMAN_FOLDER}" "${LIBPIXMAN_FOLDER}"
+do_container_copy_license "${work_folder_path}/${LIBFFI_FOLDER}" "${LIBFFI_FOLDER}"
+do_container_copy_license "${work_folder_path}/${LIBZ_FOLDER}" "${LIBZ_FOLDER}"
+do_container_copy_license "${work_folder_path}/${LIBPIXMAN_FOLDER}" "${LIBPIXMAN_FOLDER}"
 
 if [ "${target_name}" != "debian" ]
 then
-  do_container_copy_license "${work_folder}/${LIBICONV_FOLDER}" "${LIBICONV_FOLDER}"
+  do_container_copy_license "${work_folder_path}/${LIBICONV_FOLDER}" "${LIBICONV_FOLDER}"
 fi
 
 if [ "${target_name}" == "win" ]
@@ -2536,16 +2579,16 @@ do_container_copy_info
 
 # ----- Create the distribution package. -----
 
-mkdir -p "${output_folder}"
+mkdir -p "${output_folder_path}"
 
 if [ "${GIT_HEAD}" == "gnuarmeclipse" ]
 then
-  distribution_file_version=$(cat "${git_folder}/VERSION")-${DISTRIBUTION_FILE_DATE}
+  distribution_file_version=$(cat "${work_folder_path}/${QEMU_FOLDER_NAME}/VERSION")-${DISTRIBUTION_FILE_DATE}
 elif [ "${GIT_HEAD}" == "gnuarmeclipse-dev" ]
 then
-  distribution_file_version=$(cat "${git_folder}/VERSION")-${DISTRIBUTION_FILE_DATE}-dev
+  distribution_file_version=$(cat "${work_folder_path}/${QEMU_FOLDER_NAME}/VERSION")-${DISTRIBUTION_FILE_DATE}-dev
 else
-  distribution_file_version=$(cat "${git_folder}/VERSION")-${DISTRIBUTION_FILE_DATE}-head
+  distribution_file_version=$(cat "${work_folder_path}/${QEMU_FOLDER_NAME}/VERSION")-${DISTRIBUTION_FILE_DATE}-head
 fi
 
 distribution_executable_name="qemu-system-gnuarmeclipse"
