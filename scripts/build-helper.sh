@@ -594,13 +594,6 @@ do_container_create_distribution() {
         do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
         popd
 
-        # Display some information about the created application.
-        echo
-        echo "DLLs:"
-        set +e
-        ${cross_compile_prefix}-objdump -x "${install_folder}/${APP_LC_NAME}/bin/${distribution_executable_name}.exe" | grep -i 'DLL Name'
-        set -e
-
       elif [ "${target_name}" == "debian" ]
       then
 
@@ -619,41 +612,6 @@ do_container_create_distribution() {
         pushd "$(dirname ${distribution_file})"
         do_compute_sha shasum -a 256 -p "$(basename ${distribution_file})"
         popd
-
-        # Display some information about the created application.
-        pushd "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}/bin"
-        rm -rf /tmp/mylibs
-        echo
-        echo "Libraries:"
-        set +e
-        echo "${distribution_executable_name}"
-        readelf -d "${distribution_executable_name}" | egrep -i 'library|dynamic'
-        readelf -d "${distribution_executable_name}" | egrep -i 'library|dynamic' | grep NEEDED >>/tmp/mylibs
-        for f in `find . -type f -name '*.so*' -print`
-        do
-          echo "${f}"
-          readelf -d "${f}" | egrep -i 'library|dynamic'
-          readelf -d "${f}" | egrep -i 'library|dynamic' | grep NEEDED >>/tmp/mylibs
-        done
-        echo
-        echo "Needed:"
-        sort -u /tmp/mylibs
-
-        rpl=$(readelf -d "${distribution_executable_name}" | egrep -i 'runpath' | sed -e 's/.*\[\(.*\)\]/\1/')
-        if [ "$rpl" != '$ORIGIN' ]
-        then
-          echo "Wrong runpath $rpl"
-          exit 1
-        fi
-        popd
-        set -e
-        echo
-        ls -l "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}/bin"
-
-        # Check if the application starts (if all dynamic libraries are available).
-        echo
-        "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}/bin/${distribution_executable_name}" --version $@
-        result="$?"
 
       elif [ "${target_name}" == "osx" ]
       then
@@ -704,11 +662,6 @@ do_container_create_distribution() {
         echo
         ls -l "${install_folder}/${APP_LC_NAME}/bin"
 
-        # Check if the application starts (if all dynamic libraries are available).
-        echo
-        "${install_folder}/${APP_LC_NAME}/bin/${distribution_executable_name}" --version
-        result="$?"
-
       fi
 
       if [ "${host_uname}" == "Linux" ]
@@ -727,6 +680,68 @@ do_container_create_distribution() {
       fi
 }
 
+do_check_application() {
+  local executable_name=$1
+
+  if [ "${target_name}" == "win" ]
+  then
+
+    # Display some information about the created application.
+    echo
+    echo "DLLs:"
+    set +e
+    ${cross_compile_prefix}-objdump -x "${install_folder}/${APP_LC_NAME}/bin/${executable_name}.exe" | grep -i 'DLL Name'
+    set -e
+    result=0
+
+  elif [ "${target_name}" == "debian" ]
+  then
+
+    # Display some information about the created application.
+    pushd "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}/bin"
+    rm -rf /tmp/mylibs
+    echo
+    echo "Libraries:"
+    set +e
+    echo "${executable_name}"
+    readelf -d "${executable_name}" | egrep -i 'library|dynamic'
+    readelf -d "${executable_name}" | egrep -i 'library|dynamic' | grep NEEDED >>/tmp/mylibs
+    for f in `find . -type f -name '*.so*' -print`
+    do
+      echo "${f}"
+      readelf -d "${f}" | egrep -i 'library|dynamic'
+      readelf -d "${f}" | egrep -i 'library|dynamic' | grep NEEDED >>/tmp/mylibs
+    done
+    echo
+    echo "Needed:"
+    sort -u /tmp/mylibs
+
+    rpl=$(readelf -d "${executable_name}" | egrep -i 'runpath' | sed -e 's/.*\[\(.*\)\]/\1/')
+    if [ "$rpl" != '$ORIGIN' ]
+    then
+      echo "Wrong runpath $rpl"
+      exit 1
+    fi
+    popd
+    set -e
+    echo
+    ls -l "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}/bin"
+
+    # Check if the application starts (if all dynamic libraries are available).
+    echo
+    "${install_folder}/archive/gnu-mcu-eclipse/${APP_LC_NAME}/${distribution_file_version}/bin/${executable_name}" --version $@
+    result="$?"
+
+  elif [ "${target_name}" == "osx" ]
+  then
+
+    echo
+    # Check if the application starts (if all dynamic libraries are available).
+    "${install_folder}/${APP_LC_NAME}/bin/${executable_name}" --version
+    result="$?"
+  
+  fi
+}
 # v===========================================================================v
 do_container_completed() {
 

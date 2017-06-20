@@ -46,7 +46,7 @@ APP_NAME="RISC-V Embedded GCC"
 
 # Used as part of file/folder paths.
 APP_UC_NAME="GNU RISC-V Embedded GCC"
-APP_LC_NAME="riscv-eabi-gcc"
+APP_LC_NAME="riscv-elf-gcc"
 
 # On Parallels virtual machines, prefer host Work folder.
 # Second choice are Work folders on secondary disks.
@@ -88,6 +88,8 @@ DO_BUILD_DEB64=""
 DO_BUILD_OSX=""
 helper_script_path=""
 do_no_strip=""
+multilib_flags="" # by default multili is enabled
+do_no_pdf=""
 
 while [ $# -gt 0 ]
 do
@@ -135,6 +137,16 @@ do
 
     --no-strip)
       do_no_strip="y"
+      shift
+      ;;
+
+    --no-pdf)
+      do_no_pdf="y"
+      shift
+      ;;
+
+    --disable-multilib)
+      multilib_flags="--disable-multilib"
       shift
       ;;
 
@@ -205,29 +217,35 @@ fi
 echo "Helper script: \"${helper_script_path}\"."
 source "${helper_script_path}"
 
-# ----- Libraries sources. -----
-
-# For updates, please check the corresponding pages.
+# ----- Input repositories -----
 
 # The custom RISC-V GCC branch is available from the dedicated Git repository
 # which is part of the GNU MCU Eclipse project hosted on GitHub.
 # Generally this branch follows the official RISC-V GCC master branch,
 # with updates after every RISC-V GCC public release.
 
+BINUTILS_FOLDER_NAME="binutils-gdb.git"
+BINUTILS_GIT_URL="https://github.com/gnu-mcu-eclipse/riscv-binutils-gdb.git"
+#BINUTILS_GIT_BRANCH="riscv-next"
+BINUTILS_GIT_BRANCH="__archive__"
+BINUTILS_GIT_COMMIT="3f21b5c9675db61ef5462442b6a068d4a3da8aaf"
+
 GCC_FOLDER_NAME="gcc.git"
 GCC_GIT_URL="https://github.com/gnu-mcu-eclipse/riscv-gcc.git"
-GCC_GIT_BRANCH="riscv-next"
-GCC_GIT_COMMIT="HEAD"
-
-BINUTILS_FOLDER_NAME="binutils.git"
-BINUTILS_GIT_URL="https://github.com/gnu-mcu-eclipse/riscv-binutils-gdb.git"
-BINUTILS_GIT_BRANCH="riscv-next"
-BINUTILS_GIT_COMMIT="3f21b5c9675db61ef5462442b6a068d4a3da8aaf"
+# GCC_GIT_BRANCH="riscv-next"
+GCC_GIT_BRANCH="riscv-gcc-7"
+GCC_GIT_COMMIT="16210e6270e200cd4892a90ecef608906be3a130"
 
 NEWLIB_FOLDER_NAME="newlib.git"
 NEWLIB_GIT_URL="https://github.com/gnu-mcu-eclipse/riscv-newlib.git"
 NEWLIB_GIT_BRANCH="riscv-newlib-2.5.0"
-NEWLIB_GIT_COMMIT="HEAD"
+NEWLIB_GIT_COMMIT="ccd8a0a4ffbbc00400892334eaf64a1616302b35"
+
+
+# ----- Libraries sources. -----
+
+# For updates, please check the corresponding pages.
+
 
 # ----- Define build constants. -----
 
@@ -254,6 +272,9 @@ then
   if [ "${ACTION}" == "cleanall" ]
   then
     rm -rf "${PROJECT_GIT_FOLDER_PATH}"
+    rm -rf "${WORK_FOLDER_PATH}/${BINUTILS_FOLDER_NAME}"
+    rm -rf "${WORK_FOLDER_PATH}/${GCC_FOLDER_NAME}"
+    rm -rf "${WORK_FOLDER_PATH}/${NEWLIB_FOLDER_NAME}"
     rm -rf "${WORK_FOLDER_PATH}/output"
   fi
 
@@ -271,7 +292,7 @@ do_host_detect
 
 # ----- Prepare prerequisites. -----
 
-do_host_prepare_prerequisites_riscv
+do_host_prepare_prerequisites
 
 # ----- Process "preload-images" action. -----
 
@@ -386,9 +407,6 @@ echo
 echo "Checking host unzip..."
 unzip | grep UnZip
 
-if false
-then
-
 echo
 echo "Checking host makeinfo..."
 makeinfo --version | grep 'GNU texinfo'
@@ -406,8 +424,6 @@ elif which glibtoolize >/dev/null; then
 else
     echo "$0: Error: libtool is required" >&2
     exit 1
-fi
-
 fi
 
 # ----- Get the project git repository. -----
@@ -550,14 +566,14 @@ fi
 # Create the build script (needs to be separate for Docker).
 
 script_name="build.sh"
-script_file="${WORK_FOLDER_PATH}/scripts/${script_name}"
+script_file_path="${WORK_FOLDER_PATH}/scripts/${script_name}"
 
-rm -f "${script_file}"
-mkdir -p "$(dirname ${script_file})"
-touch "${script_file}"
+rm -f "${script_file_path}"
+mkdir -p "$(dirname ${script_file_path})"
+touch "${script_file_path}"
 
 # Note: EOF is quoted to prevent substitutions here.
-cat <<'EOF' >> "${script_file}"
+cat <<'EOF' >> "${script_file_path}"
 #!/usr/bin/env bash
 
 # -----------------------------------------------------------------------------
@@ -583,7 +599,7 @@ EOF
 # The above marker must start in the first column.
 
 # Note: EOF is not quoted to allow local substitutions.
-cat <<EOF >> "${script_file}"
+cat <<EOF >> "${script_file_path}"
 
 APP_NAME="${APP_NAME}"
 APP_LC_NAME="${APP_LC_NAME}"
@@ -596,6 +612,14 @@ GCC_FOLDER_NAME="${GCC_FOLDER_NAME}"
 NEWLIB_FOLDER_NAME="${NEWLIB_FOLDER_NAME}"
 
 do_no_strip="${do_no_strip}"
+do_no_pdf="${do_no_pdf}"
+
+gcc_target="riscv64-unknown-elf"
+gcc_arch="rv64imafdc"
+gcc_abi="lp64d"
+
+multilib_flags="${multilib_flags}"
+cflags_for_target="-Os -mcmodel=medlow"
 
 EOF
 # The above marker must start in the first column.
@@ -604,19 +628,20 @@ EOF
 set +u
 if [[ ! -z ${DEBUG} ]]
 then
-  echo "DEBUG=${DEBUG}" "${script_file}"
+  echo "DEBUG=${DEBUG}" "${script_file_path}"
   echo
 fi
 set -u
 
 # Note: EOF is quoted to prevent substitutions here.
-cat <<'EOF' >> "${script_file}"
+cat <<'EOF' >> "${script_file_path}"
 
 PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR:-""}
 
 # For just in case.
 export LC_ALL="C"
-export CONFIG_SHELL="/bin/bash"
+# export CONFIG_SHELL="/bin/bash"
+export CONFIG_SHELL="/bin/sh"
 
 script_name="$(basename "$0")"
 args="$@"
@@ -774,12 +799,11 @@ mkdir -p "${output_folder_path}"
 
 # ----- Build BINUTILS. -----
 
-binutils_folder="binutils"
+binutils_folder="binutils-gdb"
 binutils_stamp_file="${build_folder_path}/${binutils_folder}/stamp-install-completed"
 
-gcc_target="riscv64-unknown-elf"
-
 jobs="--jobs=8"
+branding="GNU MCU Eclipse"
 
 if [ ! -f "${binutils_stamp_file}" ]
 then
@@ -803,6 +827,7 @@ then
       --host="${cross_compile_prefix}" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --target="${gcc_target}" \
+      --with-pkgversion="${branding}" \
       \
       --disable-werror \
       --disable-build-warnings \
@@ -810,7 +835,7 @@ then
       --without-system-zlib \
     | tee "configure-output.txt"
 
-  elif [ "${target_name}" == "osx" ]
+  elif [ \( "${target_name}" == "osx" \) -o \( "${target_name}" == "debian" \) ]
   then
 
     CFLAGS="-Wno-unknown-warning-option -Wno-extended-offsetof -Wno-deprecated-declarations -Wno-incompatible-pointer-types-discards-qualifiers -Wno-implicit-function-declaration -Wno-parentheses -Wno-format-nonliteral -Wno-shift-count-overflow -Wno-constant-logical-operand -Wno-shift-negative-value -Wno-format -m${target_bits} -pipe" \
@@ -818,50 +843,38 @@ then
     "${work_folder_path}/${BINUTILS_FOLDER_NAME}/configure" \
       --prefix="${install_folder}/${APP_LC_NAME}" \
       --target="${gcc_target}" \
+      --with-pkgversion="${branding}" \
       \
       --disable-werror \
       --disable-build-warnings \
       --disable-gdb-build-warnings \
       --without-system-zlib \
-    | tee "configure-output.txt"
-
-  elif [ "${target_name}" == "debian" ]
-  then
-
-    CFLAGS="-Wno-unknown-warning-option -Wno-extended-offsetof -Wno-deprecated-declarations -Wno-incompatible-pointer-types-discards-qualifiers -Wno-implicit-function-declaration -Wno-parentheses -Wno-format-nonliteral -Wno-shift-count-overflow -Wno-constant-logical-operand -Wno-shift-negative-value -Wno-format -m${target_bits} -pipe" \
-    CXXFLAGS="-Wno-format-nonliteral -Wno-format-security -Wno-deprecated -Wno-unknown-warning-option -Wno-c++11-narrowing -m${target_bits} -pipe" \
-    "${work_folder_path}/${BINUTILS_FOLDER_NAME}/configure" \
-      --prefix="${install_folder}/${APP_LC_NAME}" \
-      --target="${gcc_target}" \
-      \
-      --disable-werror \
-      --disable-build-warnings \
-      --disable-gdb-build-warnings \
-      --without-system-zlib \
+      --disable-nls \
     | tee "configure-output.txt"
 
   fi
 
   echo
   echo "Running make binutils..."
-
-  make clean
-  make "${jobs}" all
-  make "${jobs}" install
-  make "${jobs}" install-pdf
+  
+  (
+    make clean
+    make "${jobs}" all
+    make "${jobs}" install
+    if [ -z "${do_no_pdf}" ]
+    then
+      make "${jobs}" install-pdf
+    fi
+  ) | tee "make-newlib-all-output.txt"
 
   # The binutils were successfuly created.
   touch "${binutils_stamp_file}"
 
 fi
 
-# ----- Build GCC. -----
+# ----- Download GCC prerequisites. -----
 
-
-gcc_folder="gcc"
-newlib_folder="newlib"
-
-gcc_prerequisites_stamp_file="${build_folder_path}/${gcc_folder}/stamp-prerequisites-completed"
+gcc_prerequisites_stamp_file="${build_folder_path}/stamp-prerequisites-completed"
 
 if [ ! -f "${gcc_prerequisites_stamp_file}" ]
 then
@@ -876,19 +889,344 @@ then
   touch "${gcc_prerequisites_stamp_file}"
 fi
 
-gcc_stamp_file="${build_folder_path}/${gcc_folder}/stamp-install-completed"
+# ----- Save PATH and set it to include the new binaries -----
 
 saved_path=${PATH}
 PATH="${install_folder}/${APP_LC_NAME}/bin":${PATH}
 
-if [ ! -f "${gcc_stamp_file}" ]
+# ----- Build GCC, first stage. -----
+
+# The first stage creates a compiler without libraries, that is required
+# to compile newlib.
+
+gcc_folder="gcc"
+gcc_stage1_folder="gcc-first"
+gcc_stage1_stamp_file="${build_folder_path}/${gcc_stage1_folder}/stamp-install-completed"
+mkdir -p "${build_folder_path}/${gcc_stage1_folder}"
+
+if [ ! -f "${gcc_stage1_stamp_file}" ]
 then
 
-  mkdir -p "${build_folder_path}/${gcc_folder}"
-  cd "${build_folder_path}/${gcc_folder}"
+  mkdir -p "${build_folder_path}/${gcc_stage1_folder}"
+  cd "${build_folder_path}/${gcc_stage1_folder}"
 
   echo
-  echo "Running configure RISC-V GCC..."
+  echo "Running first stage configure RISC-V GCC ..."
+
+  # https://gcc.gnu.org/install/configure.html
+  # --enable-shared[=package[,…]] build shared versions of libraries
+  # --enable-tls specify that the target supports TLS (Thread Local Storage). 
+  # --enable-nls enables Native Language Support (NLS)
+  # --enable-checking=list the compiler is built to perform internal consistency checks of the requested complexity. ‘yes’ (most common checks)
+  # --with-headers=dir specify that target headers are available when building a cross compiler
+  
+  if [ "${target_name}" == "win" ]
+  then
+
+    cd "${build_folder_path}/openocd"
+
+    # --enable-minidriver-dummy -> configure error
+    # --enable-buspirate -> not supported on mingw
+    # --enable-zy1000 -> netinet/tcp.h: No such file or directory
+    # --enable-sysfsgpio -> available only on Linux
+
+    # --enable-openjtag_ftdi -> --enable-openjtag
+    # --enable-presto_libftdi -> --enable-presto
+    # --enable-usb_blaster_libftdi -> --enable-usb_blaster
+
+    # All variables below are passed on the command line before 'configure'.
+    # Be sure all these lines end in '\' to ensure lines are concatenated.
+    OUTPUT_DIR="${build_folder_path}" \
+    \
+    CPPFLAGS="-Werror -m${target_bits} -pipe" \
+    PKG_CONFIG="${git_folder_path}/gnu-mcu-eclipse/scripts/cross-pkg-config" \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig" \
+    PKG_CONFIG_PREFIX="${install_folder}" \
+    \
+    bash "${git_folder_path}/configure" \
+    --build="$(uname -m)-linux-gnu" \
+    --host="${cross_compile_prefix}" \
+    --prefix="${install_folder}/openocd"  \
+    --datarootdir="${install_folder}" \
+    --infodir="${install_folder}/${APP_LC_NAME}/info"  \
+    --localedir="${install_folder}/${APP_LC_NAME}/locale"  \
+    --mandir="${install_folder}/${APP_LC_NAME}/man"  \
+    --docdir="${install_folder}/${APP_LC_NAME}/doc"  \
+    --disable-wextra \
+    --disable-werror \
+    --enable-dependency-tracking \
+    \
+    --enable-branding="GNU MCU Eclipse" \
+    \
+    --enable-aice \
+    --enable-amtjtagaccel \
+    --enable-armjtagew \
+    --enable-at91rm9200 \
+    --enable-bcm2835gpio \
+    --disable-buspirate \
+    --enable-cmsis-dap \
+    --enable-dummy \
+    --enable-ep93xx \
+    --enable-ftdi \
+    --enable-gw16012 \
+    --disable-ioutil \
+    --enable-jlink \
+    --enable-jtag_vpi \
+    --disable-minidriver-dummy \
+    --disable-oocd_trace \
+    --enable-opendous \
+    --enable-openjtag \
+    --enable-osbdm \
+    --enable-parport \
+    --disable-parport-ppdev \
+    --enable-parport-giveio \
+    --enable-presto \
+    --enable-remote-bitbang \
+    --enable-riscv \
+    --enable-rlink \
+    --enable-stlink \
+    --disable-sysfsgpio \
+    --enable-ti-icdi \
+    --enable-ulink \
+    --enable-usb_blaster \
+    --enable-usb-blaster-2 \
+    --enable-usbprog \
+    --enable-vsllink \
+    --disable-zy1000-master \
+    --disable-zy1000 \
+    | tee "${output_folder_path}/configure-output.txt"
+    # Note: don't forget to update the INFO.txt file after changing these.
+
+  elif [ "${target_name}" == "osx" ]
+  then
+
+    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH:-""}
+
+    # All variables below are passed on the command line before 'configure'.
+    # Be sure all these lines end in '\' to ensure lines are concatenated.
+    CFLAGS="-Wno-tautological-compare -Wno-deprecated-declarations -Wno-unknown-warning-option -Wno-unused-value -Wno-extended-offsetof -m${target_bits} -pipe" \
+    CXXFLAGS="-Wno-keyword-macro -Wno-unused-private-field -Wno-format-security -Wno-char-subscripts -Wno-deprecated -Wno-unused-private-field -Wno-gnu-zero-variadic-macro-arguments -Wno-mismatched-tags -Wno-c99-extensions -Wno-array-bounds -Wno-extended-offsetof -Wno-invalid-offsetof -m${target_bits} -pipe" \
+    \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
+    \
+    DYLD_LIBRARY_PATH="${install_folder}/lib":"${DYLD_LIBRARY_PATH}" \
+    \
+    bash "${work_folder_path}/${GCC_FOLDER_NAME}/configure" \
+      --prefix="${install_folder}/${APP_LC_NAME}"  \
+      --target="${gcc_target}" \
+      --with-pkgversion="${branding}" \
+      \
+      --disable-shared \
+      --disable-threads \
+      --disable-tls \
+      --enable-languages=c \
+      --without-system-zlib \
+      --with-newlib \
+      --without-headers \
+      --disable-libmudflap \
+      --disable-libssp \
+      --disable-libquadmath \
+      --disable-libgomp \
+      --disable-nls \
+      --enable-checking=no \
+      "${multilib_flags}" \
+      --with-abi="${gcc_abi}" \
+      --with-arch="${gcc_arch}" \
+      CFLAGS_FOR_TARGET="${cflags_for_target}" \
+      | tee "configure-output.txt"
+ 
+  elif [ "${target_name}" == "debian" ]
+  then
+
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-""}
+
+    cd "${build_folder_path}/openocd"
+
+    # --enable-minidriver-dummy -> configure error
+
+    # --enable-openjtag_ftdi -> --enable-openjtag
+    # --enable-presto_libftdi -> --enable-presto
+    # --enable-usb_blaster_libftdi -> --enable-usb_blaster
+
+    # All variables below are passed on the command line before 'configure'.
+    # Be sure all these lines end in '\' to ensure lines are concatenated.
+    # On some machines libftdi ends in lib64, so we refer both lib & lib64
+    CPPFLAGS="-m${target_bits} -pipe" \
+    LDFLAGS='-Wl,-lpthread' \
+    \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
+    \
+    LD_LIBRARY_PATH="${install_folder}/lib":"${install_folder}/lib64":"${LD_LIBRARY_PATH}" \
+    \
+    bash "${git_folder_path}/configure" \
+    --prefix="${install_folder}/openocd"  \
+    --datarootdir="${install_folder}" \
+    --infodir="${install_folder}/${APP_LC_NAME}/info"  \
+    --localedir="${install_folder}/${APP_LC_NAME}/locale"  \
+    --mandir="${install_folder}/${APP_LC_NAME}/man"  \
+    --docdir="${install_folder}/${APP_LC_NAME}/doc"  \
+    --disable-wextra \
+    --disable-werror \
+    --enable-dependency-tracking \
+    \
+    --enable-branding="GNU MCU Eclipse" \
+    \
+    --enable-aice \
+    --enable-amtjtagaccel \
+    --enable-armjtagew \
+    --enable-at91rm9200 \
+    --enable-bcm2835gpio \
+    --enable-buspirate \
+    --enable-cmsis-dap \
+    --enable-dummy \
+    --enable-ep93xx \
+    --enable-ftdi \
+    --enable-gw16012 \
+    --disable-ioutil \
+    --enable-jlink \
+    --enable-jtag_vpi \
+    --disable-minidriver-dummy \
+    --disable-oocd_trace \
+    --enable-opendous \
+    --enable-openjtag \
+    --enable-osbdm \
+    --enable-parport \
+    --disable-parport-ppdev \
+    --enable-parport-giveio \
+    --enable-presto \
+    --enable-remote-bitbang \
+    --enable-riscv \
+    --enable-rlink \
+    --enable-stlink \
+    --enable-sysfsgpio \
+    --enable-ti-icdi \
+    --enable-ulink \
+    --enable-usb_blaster \
+    --enable-usb-blaster-2 \
+    --enable-usbprog \
+    --enable-vsllink \
+    --disable-zy1000-master \
+    --disable-zy1000 \
+    | tee "${output_folder_path}/configure-output.txt"
+    # Note: don't forget to update the INFO.txt file after changing these.
+
+  fi
+
+  # ----- Partial build, without documentation. -----
+  echo
+  echo "Running first stage make all..."
+
+  cd "${build_folder_path}/${gcc_stage1_folder}"
+
+  (
+  if [ "${target_name}" == "osx" ]
+  then
+    # For unknown reasons, in this environment the build fails with -j8
+    make -j1 all
+  else
+    make "${jobs}" all
+  fi
+
+  make "${jobs}" install
+
+  ) | tee "make-all-output.txt"
+  touch "${gcc_stage1_stamp_file}"
+
+fi
+
+# ----- Build newlib. -----
+
+newlib_folder="newlib"
+newlib_stamp_file="${build_folder_path}/${newlib_folder}/stamp-install-completed"
+mkdir -p "${build_folder_path}/${newlib_folder}"
+
+if [ ! -f "${newlib_stamp_file}" ]
+then
+
+  mkdir -p "${build_folder_path}/${newlib_folder}"
+  cd "${build_folder_path}/${newlib_folder}"
+
+  echo
+  echo "Running newlib configure..."
+
+  if [ "${target_name}" == "win" ]
+  then
+
+    echo
+
+  elif [ "${target_name}" == "osx" ]
+  then
+
+    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH:-""}
+
+    # All variables below are passed on the command line before 'configure'.
+    # Be sure all these lines end in '\' to ensure lines are concatenated.
+    CFLAGS="-m${target_bits} -pipe" \
+    CXXFLAGS="-m${target_bits} -pipe" \
+    \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
+    \
+    DYLD_LIBRARY_PATH="${install_folder}/lib":"${DYLD_LIBRARY_PATH}" \
+    \
+    bash "${work_folder_path}/${NEWLIB_FOLDER_NAME}/configure" \
+      --prefix="${install_folder}/${APP_LC_NAME}"  \
+      --target="${gcc_target}" \
+      \
+      --enable-newlib-io-long-double \
+      --enable-newlib-io-long-long \
+      --enable-newlib-io-c99-formats \
+      --enable-newlib-register-fini \
+      --enable-newlib-retargetable-locking \
+      --disable-newlib-supplied-syscalls \
+      --disable-nls \
+      CFLAGS_FOR_TARGET="-Os -mcmodel=medlow" \
+      | tee "configure-output.txt"
+
+  elif [ "${target_name}" == "debian" ]
+  then
+
+    echo
+
+  fi
+
+  cd "${build_folder_path}/${newlib_folder}"
+  (
+    make clean
+    make "${jobs}" all 
+    make "${jobs}" install 
+
+    if [ -z "${do_no_pdf}" ]
+    then
+
+      make "${jobs}" pdf
+
+      /usr/bin/install -v -c -m 644 "${gcc_target}/libgloss/doc/porting.pdf" "${install_folder}/${APP_LC_NAME}/share/doc"
+      /usr/bin/install -v -c -m 644 "${gcc_target}/newlib/libc/libc.pdf" "${install_folder}/${APP_LC_NAME}/share/doc"
+      /usr/bin/install -v -c -m 644 "${gcc_target}/newlib/libm/libm.pdf" "${install_folder}/${APP_LC_NAME}/share/doc"
+    
+    fi
+
+  ) | tee "make-newlib-all-output.txt"
+
+  touch "${newlib_stamp_file}"
+fi
+
+
+
+
+gcc_stage2_folder="gcc-second"
+gcc_stage2_stamp_file="${build_folder_path}/${gcc_stage2_folder}/stamp-install-completed"
+mkdir -p "${build_folder_path}/${gcc_stage2_folder}"
+
+if [ ! -f "${gcc_stage2_stamp_file}" ]
+then
+
+  mkdir -p "${build_folder_path}/${gcc_stage2_folder}"
+  cd "${build_folder_path}/${gcc_stage2_folder}"
+
+  # https://gcc.gnu.org/install/configure.html
+  echo
+  echo "Running second stage configure RISC-V GCC ..."
 
   if [ "${target_name}" == "win" ]
   then
@@ -967,6 +1305,44 @@ then
     | tee "${output_folder_path}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
 
+  elif [ "${target_name}" == "osx" ]
+  then
+
+    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH:-""}
+
+    # All variables below are passed on the command line before 'configure'.
+    # Be sure all these lines end in '\' to ensure lines are concatenated.
+    CFLAGS="-Wno-tautological-compare -Wno-deprecated-declarations -Wno-unknown-warning-option -Wno-unused-value -Wno-extended-offsetof -m${target_bits} -pipe" \
+    CXXFLAGS="-Wno-keyword-macro -Wno-unused-private-field -Wno-format-security -Wno-char-subscripts -Wno-deprecated -Wno-unused-private-field -Wno-gnu-zero-variadic-macro-arguments -Wno-mismatched-tags -Wno-c99-extensions -Wno-array-bounds -Wno-extended-offsetof -Wno-invalid-offsetof -m${target_bits} -pipe" \
+    \
+    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
+    \
+    DYLD_LIBRARY_PATH="${install_folder}/lib":"${DYLD_LIBRARY_PATH}" \
+    \
+    bash "${work_folder_path}/${GCC_FOLDER_NAME}/configure" \
+      --prefix="${install_folder}/${APP_LC_NAME}"  \
+      --target="${gcc_target}" \
+      --with-pkgversion="${branding}" \
+      \
+      --disable-shared \
+      --disable-threads \
+      --enable-tls \
+      --enable-languages=c,c++ \
+      --without-system-zlib \
+      --with-newlib \
+      --with-headers="${install_folder}/${gcc_target}/include" \
+      --disable-libmudflap \
+      --disable-libssp \
+      --disable-libquadmath \
+      --disable-libgomp \
+      --disable-nls \
+      --enable-checking=yes \
+      "${multilib_flags}" \
+      --with-abi="${gcc_abi}" \
+      --with-arch="${gcc_arch}" \
+      CFLAGS_FOR_TARGET="${cflags_for_target}" \
+      | tee "configure-output.txt"
+ 
   elif [ "${target_name}" == "debian" ]
   then
 
@@ -1042,71 +1418,42 @@ then
     | tee "${output_folder_path}/configure-output.txt"
     # Note: don't forget to update the INFO.txt file after changing these.
 
-  elif [ "${target_name}" == "osx" ]
-  then
-
-    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH:-""}
-
-    # All variables below are passed on the command line before 'configure'.
-    # Be sure all these lines end in '\' to ensure lines are concatenated.
-    CPPFLAGS="-m${target_bits} -pipe" \
-    \
-    PKG_CONFIG_LIBDIR="${install_folder}/lib/pkgconfig":"${install_folder}/lib64/pkgconfig" \
-    \
-    DYLD_LIBRARY_PATH="${install_folder}/lib":"${DYLD_LIBRARY_PATH}" \
-    \
-    bash "${work_folder_path}/${GCC_FOLDER_NAME}/configure" \
-      --prefix="${install_folder}/${APP_LC_NAME}"  \
-      --target="${gcc_target}" \
-      \
-      --disable-shared \
-      --disable-threads \
-      --disable-tls \
-      --enable-languages=c,c++ \
-      --without-system-zlib \
-      --with-newlib \
-      --disable-libmudflap \
-      --disable-libssp \
-      --disable-libquadmath \
-      --disable-libgomp \
-      --disable-nls \
-      --enable-checking=yes \
-      --disable-multilib \
-      --with-abi=lp64d \
-      --with-arch=rv64imafdc \
-      CFLAGS_FOR_TARGET="-Os -mcmodel=medlow" \
-      | tee "configure-output.txt"
- 
   fi
 
+  # ----- Full build, with documentation. -----
+  echo
+  echo "Running second stage make..."
+
+  cd "${build_folder_path}/${gcc_stage2_folder}"
+
+  (
+  if [ "${target_name}" == "osx" ]
+  then
+    # For unknown reasons, in this environment the build fails with -j8
+    make -j1 all
+  else
+    make "${jobs}" all
+  fi
+
+  make "${jobs}" install
+  if [ -z "${do_no_pdf}" ]
+  then
+
+    set +e
+    make "${jobs}" install-pdf install-man
+    set -e
+
+  fi
+  ) | tee "make-all-output.txt"
+
+  touch "${gcc_stage2_stamp_file}"
+
 fi
 
+# -------------------------------------------------------------
 
-# ----- Full build, with documentation. -----
-
-if true
-then
-
-  echo
-  echo "Running make all..."
-
-  cd "${build_folder_path}/${gcc_folder}"
-  make "${jobs}" all-gcc install-gcc \
-    | tee "make-all-output.txt"
-
-  echo
-  echo "Running make pdf..."
-
-  make install-pdf install-html install-man \
-    | tee "make-pdf-output.txt"
-
-fi
-
+# Restore PATH
 PATH="${saved_path}"
-
-exit
-
-touch "${gcc_stamp_file}"
 
 # ----- Copy dynamic libraries to the install bin folder. -----
 
@@ -1166,7 +1513,6 @@ then
     done
   )
 
-
 elif [ "${target_name}" == "debian" ]
 then
 
@@ -1214,12 +1560,6 @@ then
     distro_machine="i386"
   fi
 
-  do_container_linux_copy_user_so libusb-1.0
-  do_container_linux_copy_user_so libusb-0.1
-  do_container_linux_copy_user_so libftdi1
-  do_container_linux_copy_user_so libhidapi-hidraw
-
-  do_container_linux_copy_system_so libudev
   do_container_linux_copy_librt_so
 
 fi
@@ -1315,9 +1655,10 @@ mkdir -p "${output_folder_path}"
 
 distribution_file_version=$(cat "${git_folder_path}/gnu-mcu-eclipse/VERSION")-${DISTRIBUTION_FILE_DATE}
 
-distribution_executable_name="riscv64-unknown-elf-gdb"
-
 do_container_create_distribution
+
+do_check_application "riscv64-unknown-elf-gdb"
+do_check_application "riscv64-unknown-elf-g++"
 
 # Requires ${distribution_file} and ${result}
 do_container_completed
