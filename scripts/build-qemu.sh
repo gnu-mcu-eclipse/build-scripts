@@ -2591,9 +2591,9 @@ else
   distribution_file_version=$(cat "${work_folder_path}/${QEMU_FOLDER_NAME}/VERSION")-${DISTRIBUTION_FILE_DATE}-head
 fi
 
-distribution_executable_name="qemu-system-gnuarmeclipse"
-
 do_container_create_distribution
+
+do_check_application "qemu-system-gnuarmeclipse" --version
 
 # Requires ${distribution_file} and ${result}
 do_container_completed
