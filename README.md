@@ -1,4 +1,4 @@
-# The GNU MCU Eclipse build scripts
+# The GNU MCU Eclipse build scripts - DEPRECATED
 
 These are the scripts used to build the GNU MCU Eclipse tools.
 
